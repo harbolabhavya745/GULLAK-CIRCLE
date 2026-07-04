@@ -1,0 +1,219 @@
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Playfair Display", Georgia, serif;
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-heading: "Oswald", sans-serif;
+  --font-display: "Oswald", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-gold-50: #FFFDF9;
+  --color-gold-100: #FDF6E2;
+  --color-gold-200: #F9EAB8;
+  --color-gold-300: #F4C430; /* Highlight Gold */
+  --color-gold-400: #F4C430; /* Highlight Gold */
+  --color-gold-500: #D4AF37; /* Accent Gold */
+  --color-gold-600: #B89328;
+  --color-gold-700: #93731E;
+  --color-gold-800: #705615;
+  --color-gold-900: #4B390D;
+  --color-gold-950: #291E05;
+
+  --color-matte-black: #171717;     /* Deep Obsidian Background */
+  --color-matte-gray: #202124;      /* Secondary Dark */
+  --color-matte-charcoal: #2A2A2A;  /* Cards Deep Charcoal */
+
+  /* Override standard slate shades to match primary and secondary text specifications */
+  --color-slate-50: #FAFAFA;
+  --color-slate-100: #FAFAFA;       /* Primary Text */
+  --color-slate-200: #FAFAFA;
+  --color-slate-300: #D1D5DB;       /* Secondary Text */
+  --color-slate-400: #D1D5DB;       /* Secondary Text */
+  --color-slate-500: #A8A8A8;       /* Muted Text */
+  --color-slate-600: #A8A8A8;
+  --color-slate-700: #2A2A2A;       /* Map dark slates to cards */
+  --color-slate-800: #2A2A2A;
+  --color-slate-900: #202124;       /* Map deep slates to secondary */
+  --color-slate-950: #171717;       /* Map deepest slates to background */
+}
+
+/* Force element defaults to match the premium typography requirements */
+body, 
+p, 
+span, 
+div, 
+input, 
+textarea, 
+select, 
+button, 
+label, 
+table, 
+th, 
+td, 
+blockquote, 
+figcaption, 
+a, 
+li, 
+ul, 
+ol, 
+nav, 
+form, 
+footer, 
+header, 
+small {
+  font-family: "Playfair Display", Georgia, serif;
+}
+
+/* Force headings, statistics, modal titles and section headers to use Oswald */
+h1, h2, h3, h4, h5, h6,
+.font-heading,
+.font-display,
+.title-oswald,
+[class*="hero-heading"],
+.section-title,
+.dashboard-title,
+.card-title,
+.stat-heading,
+.modal-title,
+.nav-title {
+  font-family: "Oswald", sans-serif !important;
+}
+
+/* Ensure child elements inside headings also inherit Oswald font family */
+h1 *, h2 *, h3 *, h4 *, h5 *, h6 * {
+  font-family: "Oswald", sans-serif !important;
+}
+
+/* Ensure font-mono classes are preserved as JetBrains Mono for clean data and numbers rendering */
+.font-mono, 
+[class*="font-mono"], 
+code, 
+pre {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace !important;
+}
+
+/* Luxury visual accents */
+.text-gold-gradient {
+  background: linear-gradient(135deg, #F4C430 0%, #D4AF37 50%, #B59023 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.bg-gold-gradient {
+  background: linear-gradient(135deg, #F4C430 0%, #D4AF37 50%, #9B7C24 100%);
+}
+
+.bg-gold-gradient-dark {
+  background: linear-gradient(135deg, #D4AF37 0%, #8A6D1E 100%);
+}
+
+.gold-glow {
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.15);
+}
+
+.gold-glow-intense {
+  box-shadow: 0 0 25px rgba(212, 175, 55, 0.3);
+}
+
+/* Custom glassmorphism and animations utility */
+.glass {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(212, 175, 55, 0.15);
+}
+
+.dark .glass {
+  background: rgba(42, 42, 42, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+}
+
+.glass-premium {
+  background: rgba(42, 42, 42, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  box-shadow: 0 10px 40px 0 rgba(212, 175, 55, 0.08);
+}
+
+.dark .glass-premium {
+  background: rgba(42, 42, 42, 0.92);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  box-shadow: 0 12px 48px 0 rgba(0, 0, 0, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.08);
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(197, 160, 89, 0.2);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(197, 160, 89, 0.4);
+}
+
+/* For clean transitions */
+* {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, box-shadow, transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 250ms;
+}
+
+/* Premium Card Overrides */
+.bg-matte-charcoal {
+  background: linear-gradient(135deg, #2D2D2D 0%, #202020 100%) !important;
+  border-color: rgba(212, 175, 55, 0.25) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.05) !important;
+}
+
+.bg-matte-charcoal:hover {
+  transform: translateY(-2px);
+  border-color: rgba(212, 175, 55, 0.45) !important;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), 0 0 20px rgba(212, 175, 55, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Premium Primary Buttons Override */
+button.bg-gold-500,
+.btn-primary {
+  background: #252528 !important;
+  color: #D4AF37 !important;
+  border: 1px solid rgba(212, 175, 55, 0.4) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.05) !important;
+}
+
+button.bg-gold-500:hover,
+.btn-primary:hover {
+  background: #2D2D31 !important;
+  color: #F4C430 !important;
+  border-color: #F4C430 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5), 0 0 12px rgba(212, 175, 55, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Premium Badge Overrides */
+span[class*="bg-gold-500/10"],
+span[class*="bg-gold-500/5"],
+span[class*="bg-gold-500/15"] {
+  background: rgba(30, 30, 32, 0.6) !important;
+  border: 1px solid rgba(212, 175, 55, 0.35) !important;
+  color: #D4AF37 !important;
+  text-shadow: 0 0 4px rgba(212, 175, 55, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+

@@ -1,0 +1,6 @@
+{
+  "name": "Gullak Circle",
+  "description": "Your Friends. Your Safety Net. A community-based micro-insurance platform where friends collectively save spare change and vote on financial safety net claims.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
