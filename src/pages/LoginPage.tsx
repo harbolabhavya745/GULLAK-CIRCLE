@@ -22,8 +22,8 @@ interface LoginPageProps {
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLaunch, isDarkMode, onToggleDarkMode }) => {
-  const [email, setEmail] = useState("arjun.mehta@gmail.com");
-  const [password, setPassword] = useState("••••••••");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -69,26 +69,6 @@ const handleSignup = async (e: React.FormEvent) => {
     setTimeout(() => onLaunch(), 800)
   }
 }
-
-  const handleBiometricAuth = () => {
-    setIsBiometricAuthenticating(true);
-    setError("");
-    
-    // Simulate fingerprint/face id scan
-    setTimeout(() => {
-      setIsBiometricAuthenticating(false);
-      setIsSuccess(true);
-      setTimeout(() => {
-        onLaunch();
-      }, 800);
-    }, 1800);
-  };
-
-  const autofillDemo = () => {
-    setEmail("arjun.mehta@gmail.com");
-    setPassword("arjun123");
-    setError("");
-  };
 
   return (
     <div className="min-h-screen font-sans overflow-x-hidden bg-matte-black text-slate-100 flex flex-col justify-between relative selection:bg-gold-500/20 selection:text-gold-300">
@@ -280,29 +260,10 @@ const handleSignup = async (e: React.FormEvent) => {
                     <div className="flex-grow border-t border-gold-500/5"></div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={handleBiometricAuth}
-                    className="w-full py-3 bg-matte-black/40 hover:bg-matte-black/80 border border-gold-500/15 hover:border-gold-500/35 text-slate-300 hover:text-gold-500 rounded-2xl transition-all duration-300 text-xs font-semibold flex items-center justify-center gap-2.5 shadow-sm"
-                  >
-                    <Fingerprint className="w-4.5 h-4.5 text-gold-500/75" />
-                    Secure Biometrics (Demo FaceID)
-                  </button>
                 </motion.form>
               )}
             </AnimatePresence>
           </motion.div>
-
-          {/* Quick Demo Credentials Assistant */}
-          <div className="p-4 bg-gold-500/5 rounded-2xl border border-gold-500/10 flex items-start gap-3">
-            <Info className="w-4 h-4 text-gold-500 flex-shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <p className="text-[10px] font-mono text-gold-500 uppercase tracking-wider font-bold">Demo Circle Credentials</p>
-              <p className="text-xs text-slate-400 leading-normal">
-                Click <button onClick={autofillDemo} className="text-gold-500 underline font-medium hover:text-gold-400 cursor-pointer">here</button> to auto-fill Arjun Mehta's registered trust account for reviewing.
-              </p>
-            </div>
-          </div>
 
         </div>
       </main>

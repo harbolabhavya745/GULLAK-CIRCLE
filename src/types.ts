@@ -11,6 +11,7 @@ export interface Member {
 
 export interface Transaction {
   id: string;
+  userId?: string;
   merchant: string;
   amount: number;
   roundup: number;

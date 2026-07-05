@@ -17,30 +17,33 @@ import {
   Shield,
   Users
 } from "lucide-react";
-import { Member, Claim } from "../types";
+import { Member, Claim, Transaction } from "../types";
 
 interface ProfilePageProps {
   claims: Claim[];
   poolBalance: number;
+  profile: any;
+  email?: string;
+  myTransactions?: Transaction[];
 }
 
-export const ProfilePage: React.FC<ProfilePageProps> = ({ claims, poolBalance }) => {
+export const ProfilePage: React.FC<ProfilePageProps> = ({ claims, poolBalance, profile, email, myTransactions = [] }) => {
   const [showFastTrackInfo, setShowFastTrackInfo] = React.useState(false);
 
-  // Current user representation: Arjun Mehta
   const user = {
-    name: "Arjun Mehta",
-    role: "Circle Founder",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
-    score: 96,
-    totalContributed: 2450,
-    badge: "Top Contributor",
-    email: "arjun.mehta@gmail.com",
-    joinedDate: "March 12, 2026"
+    name: profile?.name || "Loading...",
+    role: profile?.role || "Member",
+    avatar: profile?.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(profile?.name || "U")}`,
+    score: profile?.score ?? 0,
+    totalContributed: Number(profile?.total_contributed ?? 0),
+    badge: profile?.badge || "New Member",
+    email: email || "",
+    joinedDate: profile?.created_at
+      ? new Date(profile.created_at).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" })
+      : ""
   };
 
-  // Filter claims requested by Arjun (none in the mock data, but let's show an empty state or let him see his logs)
-  const myClaims = claims.filter(c => c.claimantName === user.name);
+  const myClaims = claims.filter(c => c.claimantId === profile?.id);
 
   return (
     <div className="space-y-8 pb-12">
@@ -69,14 +72,15 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ claims, poolBalance })
             </div>
             <p className="text-xs text-slate-400 font-mono">{user.email} • Joined {user.joinedDate}</p>
             
-            {/* Added back premium badges as shown in the image */}
             <div className="flex flex-wrap gap-2 justify-center md:justify-start pt-1">
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-gold-500/5 text-gold-500 text-[10px] font-medium rounded-full border border-gold-500/15">
-                <Award className="w-3 h-3 text-gold-500/80" /> Top Contributor
+                <Award className="w-3 h-3 text-gold-500/80" /> {user.badge}
               </span>
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-gold-500/5 text-gold-500 text-[10px] font-medium rounded-full border border-gold-500/15">
-                <span className="text-gold-500 text-xs">★</span> Trusted Pillar
-              </span>
+              {user.score >= 90 && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-gold-500/5 text-gold-500 text-[10px] font-medium rounded-full border border-gold-500/15">
+                  <span className="text-gold-500 text-xs">★</span> Trusted Pillar
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -85,7 +89,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ claims, poolBalance })
         <div className="flex items-center gap-5 bg-matte-black/45 p-5 rounded-2xl border border-gold-500/15 shadow-inner">
           <div className="text-right space-y-1">
             <p className="text-[9px] text-slate-500 font-mono uppercase tracking-widest font-bold">Contribution Score</p>
-            <p className="text-base font-bold text-gold-500 font-sans tracking-tight">Excellent Standing</p>
+            <p className="text-base font-bold text-gold-500 font-sans tracking-tight">
+              {user.score >= 90 ? "Excellent Standing" : user.score >= 70 ? "Good Standing" : user.score >= 40 ? "Fair Standing" : "Building Trust"}
+            </p>
           </div>
           
           <div className="relative w-20 h-20 flex items-center justify-center">
@@ -133,7 +139,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ claims, poolBalance })
           </div>
           <h4 className="text-3xl font-bold text-slate-100 font-heading tracking-tight">₹{user.totalContributed.toLocaleString()}</h4>
           <p className="text-xs text-slate-400 mt-4 flex items-center gap-1.5">
-            <Coins className="w-4 h-4 text-gold-500" /> Across 152 micro-roundups
+            <Coins className="w-4 h-4 text-gold-500" /> Across {myTransactions.length} micro-roundups
           </p>
 
           {/* Elegant Piggy Bank Watermark */}
@@ -224,25 +230,26 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ claims, poolBalance })
       <div className="p-6 md:p-8 rounded-3xl bg-matte-charcoal border border-gold-500/10 shadow-sm space-y-6">
         <div className="flex items-center justify-between">
           <h3 className="text-base font-bold text-slate-100 uppercase tracking-wider font-heading">Contribution History</h3>
-          <span className="text-xs text-slate-400 font-mono">Arjun's Spare Change History</span>
+          <span className="text-xs text-slate-400 font-mono">{user.name}'s Spare Change History</span>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {[
-            { desc: "Starbucks Coffee swipe roundup", amount: "+₹7.50", date: "Today" },
-            { desc: "Uber Rides swipe roundup", amount: "+₹5.80", date: "Yesterday" },
-            { desc: "Swiggy Delivery swipe roundup", amount: "+₹10.90", date: "2 days ago" },
-            { desc: "Weekly automatic circle booster", amount: "+₹50.00", date: "Last week" }
-          ].map((item, idx) => (
-            <div key={idx} className="flex justify-between items-center text-sm p-4 bg-matte-black rounded-2xl border border-gold-500/5 hover:border-gold-500/10 transition-colors">
-              <div>
-                <p className="font-semibold text-slate-200">{item.desc}</p>
-                <p className="text-xs text-slate-400 font-mono mt-1">{item.date}</p>
+
+        {myTransactions.length === 0 ? (
+          <p className="text-xs text-slate-500 font-mono text-center py-6">
+            No roundups yet — head to the Roundup Simulator to make your first one.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {myTransactions.slice(0, 8).map((item) => (
+              <div key={item.id} className="flex justify-between items-center text-sm p-4 bg-matte-black rounded-2xl border border-gold-500/5 hover:border-gold-500/10 transition-colors">
+                <div>
+                  <p className="font-semibold text-slate-200">{item.merchant} swipe roundup</p>
+                  <p className="text-xs text-slate-400 font-mono mt-1">{item.timestamp}</p>
+                </div>
+                <span className="font-mono text-gold-500 font-bold text-base">+₹{item.roundup.toFixed(2)}</span>
               </div>
-              <span className="font-mono text-gold-500 font-bold text-base">{item.amount}</span>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Fast Track Approval detailed info modal */}

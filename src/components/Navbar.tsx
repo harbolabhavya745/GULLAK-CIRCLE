@@ -7,6 +7,7 @@ interface NavbarProps {
   notificationCount: number;
   onOpenNotifications: () => void;
   onNavigate: (page: string) => void;
+  profile?: any;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -14,8 +15,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenSidebar,
   notificationCount,
   onOpenNotifications,
-  onNavigate
+  onNavigate,
+  profile
 }) => {
+  const firstName = profile?.name ? profile.name.split(" ")[0] : "Member";
+  const avatarUrl = profile?.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(profile?.name || "U")}`;
+
   const getPageTitle = () => {
     switch (activePage) {
       case "dashboard":
@@ -78,7 +83,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         >
           <div className="relative p-0.5 rounded-full bg-gradient-to-br from-gold-300 via-gold-500 to-gold-700 shadow-md">
             <img
-              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80"
+              src={avatarUrl}
               alt="User Avatar"
               referrerPolicy="no-referrer"
               className="w-7 h-7 rounded-full object-cover"
@@ -86,7 +91,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
           <div className="flex items-center gap-1">
             <span className="hidden md:inline text-xs font-bold text-slate-200 group-hover:text-gold-500 transition-colors">
-              Arjun M.
+              {firstName}
             </span>
             <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-gold-500 transition-colors" />
           </div>

@@ -95,23 +95,24 @@ export const CircleDetailsPage: React.FC<CircleDetailsPageProps> = ({
           <div className="p-6 rounded-3xl bg-matte-charcoal border border-gold-500/10 shadow-sm">
             <h3 className="text-xs font-bold uppercase tracking-widest font-mono text-slate-400 mb-4">Activity Timeline</h3>
             <div className="space-y-4">
-              {[
-                { time: "2 mins ago", desc: "Arjun Mehta spare change of ₹7.50 rounded up", type: "save" },
-                { time: "4 hours ago", desc: "Rahul Nair filed claim for Root Canal support", type: "claim" },
-                { time: "2 days ago", desc: "Riya Sharma clutch claim approved and fully paid", type: "payout" },
-                { time: "3 days ago", desc: "Gullak Circle pool hit ₹24k milestone", type: "milestone" }
-              ].map((item, idx) => (
-                <div key={idx} className="flex gap-3 text-xs">
-                  <div className="flex flex-col items-center">
-                    <div className="w-2.5 h-2.5 rounded-full bg-gold-500 shadow-md shadow-gold-500/20" />
-                    {idx < 3 && <div className="w-[1px] bg-gold-500/10 flex-grow my-1" />}
+              {recentTransactions.length === 0 ? (
+                <p className="text-xs text-slate-500 font-mono py-4">No activity yet. Do a roundup to get started.</p>
+              ) : (
+                recentTransactions.slice(0, 4).map((item, idx) => (
+                  <div key={item.id} className="flex gap-3 text-xs">
+                    <div className="flex flex-col items-center">
+                      <div className="w-2.5 h-2.5 rounded-full bg-gold-500 shadow-md shadow-gold-500/20" />
+                      {idx < Math.min(3, recentTransactions.length - 1) && <div className="w-[1px] bg-gold-500/10 flex-grow my-1" />}
+                    </div>
+                    <div>
+                      <p className="text-slate-500 font-mono text-[10px]">{item.timestamp}</p>
+                      <p className="text-slate-300 font-medium mt-0.5 leading-relaxed">
+                        Spare change of ₹{item.roundup.toFixed(2)} rounded up from {item.merchant}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-slate-500 font-mono text-[10px]">{item.time}</p>
-                    <p className="text-slate-300 font-medium mt-0.5 leading-relaxed">{item.desc}</p>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 

@@ -20,6 +20,7 @@ import { Claim, Member } from "../types";
 interface ClaimsFeedPageProps {
   claims: Claim[];
   members: Member[];
+  currentUserId?: string;
   onVoteClaim: (claimId: string, choice: "yes" | "no") => void;
   onExecutePayout: (claimId: string) => void;
   triggerConfetti: () => void;
@@ -29,6 +30,7 @@ interface ClaimsFeedPageProps {
 export const ClaimsFeedPage: React.FC<ClaimsFeedPageProps> = ({
   claims,
   members,
+  currentUserId,
   onVoteClaim,
   onExecutePayout,
   triggerConfetti,
@@ -127,7 +129,7 @@ export const ClaimsFeedPage: React.FC<ClaimsFeedPageProps> = ({
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {filteredClaims.map((claim) => {
             const approvalPercent = Math.min(((claim.votesYes) / 3) * 100, 100);
-            const userHasVoted = claim.votedMembers["m1"] !== undefined;
+            const userHasVoted = currentUserId && claim.votedMembers[currentUserId] !== undefined;
 
             return (
               <motion.div
@@ -217,7 +219,7 @@ export const ClaimsFeedPage: React.FC<ClaimsFeedPageProps> = ({
                   <div className="pt-3 border-t border-gold-500/10 flex items-center justify-between gap-4">
                     {userHasVoted ? (
                       <span className="text-xs text-slate-500 italic flex items-center gap-1">
-                        <Info className="w-4 h-4 text-gold-500/50" /> You casted ballot: {claim.votedMembers["m1"]?.toUpperCase()}
+                        <Info className="w-4 h-4 text-gold-500/50" /> You casted ballot: {currentUserId ? claim.votedMembers[currentUserId]?.toUpperCase() : ""}
                       </span>
                     ) : (
                       <span className="text-xs text-slate-500 font-medium">Cast trust ballot:</span>
