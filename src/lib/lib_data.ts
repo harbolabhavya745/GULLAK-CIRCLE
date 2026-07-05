@@ -154,6 +154,7 @@ export async function fetchTransactions(circleId: string): Promise<Transaction[]
   return (data ?? []).map((t: any) => ({
     id: t.id,
     userId: t.user_id,
+    createdAt: t.created_at,
     merchant: t.merchant,
     amount: Number(t.amount),
     roundup: Number(t.roundup),

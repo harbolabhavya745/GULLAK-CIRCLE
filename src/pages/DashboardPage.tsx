@@ -40,6 +40,40 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const nextMilestone = 30000;
   const milestoneProgress = Math.min((poolBalance / nextMilestone) * 100, 100);
 
+  const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const savedThisWeek = recentTransactions
+    .filter((t) => t.createdAt && new Date(t.createdAt).getTime() >= oneWeekAgo)
+    .reduce((sum, t) => sum + t.roundup, 0);
+
+  const avgTrustScore = members.length > 0
+    ? (members.reduce((sum, m) => sum + m.score, 0) / members.length)
+    : 0;
+
+  // Bucket real roundups into the last 6 calendar months for the trend chart
+  const monthLabels: string[] = [];
+  const monthTotals: number[] = [];
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    monthLabels.push(d.toLocaleDateString("en-IN", { month: "short" }));
+    const monthTotal = recentTransactions
+      .filter((t) => {
+        if (!t.createdAt) return false;
+        const td = new Date(t.createdAt);
+        return td.getFullYear() === d.getFullYear() && td.getMonth() === d.getMonth();
+      })
+      .reduce((sum, t) => sum + t.roundup, 0);
+    monthTotals.push(monthTotal);
+  }
+  const maxMonthTotal = Math.max(...monthTotals, 1);
+  const chartPoints = monthTotals.map((total, i) => {
+    const x = (i / (monthTotals.length - 1)) * 100;
+    const y = 38 - (total / maxMonthTotal) * 33;
+    return { x, y };
+  });
+  const linePath = chartPoints.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+  const areaPath = `${linePath} L 100 40 L 0 40 Z`;
+
   return (
     <div className="space-y-8 pb-12">
       {/* Welcome Banner */}
@@ -60,7 +94,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               Welcome back to Gullak Circle!
             </h2>
             <p className="text-slate-400 text-sm max-w-xl leading-relaxed">
-              You saved ₹42 this week from spare roundups. Your circle is fully secure, and 0 critical emergency alarms are triggered.
+              You saved ₹{savedThisWeek.toFixed(2)} this week from spare roundups. Your circle is fully secure, and {pendingClaims.length} pending claim{pendingClaims.length === 1 ? "" : "s"} await review.
             </p>
           </div>
           <div className="flex md:justify-end gap-3">
@@ -186,7 +220,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           </div>
           <div className="mt-4 pt-3 border-t border-gold-500/10 flex items-center justify-between">
             <span className="text-xs text-slate-500">Average Trust Score:</span>
-            <span className="text-xs font-mono font-bold text-gold-500">90.8/100</span>
+            <span className="text-xs font-mono font-bold text-gold-500">{avgTrustScore.toFixed(1)}/100</span>
           </div>
         </motion.div>
 
@@ -203,14 +237,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-base font-bold text-slate-100">Contribution Trend (Spare Change)</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Mock roundup deposits over the last 6 months</p>
+                <p className="text-xs text-slate-500 mt-0.5">Roundup deposits over the last 6 months</p>
               </div>
               <div className="flex items-center gap-1.5 text-xs text-slate-400 font-mono">
                 <span className="w-2.5 h-2.5 bg-gold-500 rounded-full" /> Regular Roundups
               </div>
             </div>
 
-            {/* Premium Custom SVG Graph */}
+            {/* Real Contribution Trend Chart */}
             <div className="relative h-48 w-full mt-4">
               <svg className="w-full h-full overflow-visible" viewBox="0 0 100 40" preserveAspectRatio="none">
                 <defs>
@@ -223,16 +257,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 <line x1="0" y1="10" x2="100" y2="10" stroke="rgba(212,175,55,0.05)" strokeWidth="0.2" />
                 <line x1="0" y1="20" x2="100" y2="20" stroke="rgba(212,175,55,0.05)" strokeWidth="0.2" />
                 <line x1="0" y1="30" x2="100" y2="30" stroke="rgba(212,175,55,0.05)" strokeWidth="0.2" />
-                
+
                 {/* Area Fill */}
+                <path d={areaPath} fill="url(#gradient)" />
+
+                {/* Line */}
                 <path
-                  d="M 0 38 L 16 32 Q 25 24 33 28 T 50 18 Q 66 12 75 14 T 100 5 L 100 40 L 0 40 Z"
-                  fill="url(#gradient)"
-                />
-                
-                {/* Smooth Curve Line */}
-                <path
-                  d="M 0 38 L 16 32 Q 25 24 33 28 T 50 18 Q 66 12 75 14 T 100 5"
+                  d={linePath}
                   fill="none"
                   stroke="#F4C430"
                   strokeWidth="1.2"
@@ -240,21 +271,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 />
 
                 {/* Data Points */}
-                <circle cx="16" cy="32" r="1.5" fill="#F4C430" stroke="#1A1A1D" strokeWidth="0.5" />
-                <circle cx="50" cy="18" r="1.5" fill="#F4C430" stroke="#1A1A1D" strokeWidth="0.5" />
-                <circle cx="75" cy="14" r="1.5" fill="#F4C430" stroke="#1A1A1D" strokeWidth="0.5" />
-                <circle cx="100" cy="5" r="1.5" fill="#F4C430" stroke="#1A1A1D" strokeWidth="0.5" />
+                {chartPoints.map((p, i) => (
+                  <circle key={i} cx={p.x} cy={p.y} r="1.5" fill="#F4C430" stroke="#1A1A1D" strokeWidth="0.5" />
+                ))}
               </svg>
-              
+
               {/* X-Axis Labels */}
               <div className="flex justify-between mt-4 text-[10px] text-slate-500 font-mono uppercase tracking-wider">
-                <span>Jan</span>
-                <span>Feb</span>
-                <span>Mar</span>
-                <span>Apr</span>
-                <span>May</span>
-                <span>Jun</span>
-                <span>Today</span>
+                {monthLabels.map((label, i) => (
+                  <span key={i}>{label}</span>
+                ))}
               </div>
             </div>
           </div>
