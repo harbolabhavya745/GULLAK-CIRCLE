@@ -35,6 +35,7 @@ export default function App() {
   const [confettiTrigger, setConfettiTrigger] = useState<boolean>(false);
 
   const [poolBalance, setPoolBalance] = useState<number>(0);
+  const [circleCreatedAt, setCircleCreatedAt] = useState<string | undefined>(undefined);
   const [members, setMembers] = useState<Member[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
@@ -112,6 +113,7 @@ export default function App() {
         fetchClaims(activeCircleId),
       ]);
       setPoolBalance(Number(circle.pool_balance ?? 0));
+      setCircleCreatedAt(circle.created_at);
       setMembers(memberList);
       setTransactions(txList);
       setClaims(claimList);
@@ -301,6 +303,8 @@ export default function App() {
             poolBalance={poolBalance}
             members={members}
             recentTransactions={transactions}
+            claims={claims}
+            circleCreatedAt={circleCreatedAt}
           />
         );
       case "simulator":

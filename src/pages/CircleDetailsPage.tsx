@@ -12,22 +12,43 @@ import {
   Sparkles, 
   ArrowUpRight 
 } from "lucide-react";
-import { Member, Transaction } from "../types";
+import { Member, Transaction, Claim } from "../types";
 
 interface CircleDetailsPageProps {
   poolBalance: number;
   members: Member[];
   recentTransactions: Transaction[];
+  claims?: Claim[];
+  circleCreatedAt?: string;
 }
 
 export const CircleDetailsPage: React.FC<CircleDetailsPageProps> = ({
   poolBalance,
   members,
-  recentTransactions
+  recentTransactions,
+  claims = [],
+  circleCreatedAt
 }) => {
   // Sort members by total contribution for the leaderboard
   const sortedMembers = [...members].sort((a, b) => b.totalContributed - a.totalContributed);
   const totalCircleContributions = members.reduce((sum, m) => sum + m.totalContributed, 0);
+
+  const now = new Date();
+  const monthlyDeposits = recentTransactions
+    .filter((t) => t.createdAt && new Date(t.createdAt).getMonth() === now.getMonth() && new Date(t.createdAt).getFullYear() === now.getFullYear())
+    .reduce((sum, t) => sum + t.roundup, 0);
+
+  const totalClaimsDisbursed = claims
+    .filter((c) => c.payoutStatus === "Paid Successfully")
+    .reduce((sum, c) => sum + c.amount, 0);
+
+  const avgContributionScore = members.length > 0
+    ? (members.reduce((sum, m) => sum + m.score, 0) / members.length)
+    : 0;
+
+  const createdDateLabel = circleCreatedAt
+    ? new Date(circleCreatedAt).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" })
+    : "—";
 
   return (
     <div className="space-y-8 pb-12">
@@ -60,11 +81,11 @@ export const CircleDetailsPage: React.FC<CircleDetailsPageProps> = ({
             <div className="mt-8 grid grid-cols-2 gap-4 pt-6 border-t border-gold-500/10">
               <div>
                 <p className="text-[10px] font-mono text-slate-500 uppercase">Monthly Deposits</p>
-                <p className="text-sm font-bold text-gold-500 mt-1">₹4,230.00</p>
+                <p className="text-sm font-bold text-gold-500 mt-1">₹{monthlyDeposits.toFixed(2)}</p>
               </div>
               <div>
                 <p className="text-[10px] font-mono text-slate-500 uppercase">Emergency Reserves</p>
-                <p className="text-sm font-bold text-gold-500 mt-1">100% Secure</p>
+                <p className="text-sm font-bold text-gold-500 mt-1">{poolBalance > 0 ? "Active" : "Building Up"}</p>
               </div>
             </div>
           </motion.div>
@@ -75,10 +96,10 @@ export const CircleDetailsPage: React.FC<CircleDetailsPageProps> = ({
             
             <div className="space-y-3">
               {[
-                { label: "Created Date", value: "March 12, 2026", icon: Calendar },
+                { label: "Created Date", value: createdDateLabel, icon: Calendar },
                 { label: "Active Members", value: `${members.length} / 10 limit`, icon: Users },
-                { label: "Total Claims Disbursed", value: "₹18,400.00", icon: CheckCircle },
-                { label: "Avg. Contribution Score", value: "90.8/100", icon: Award },
+                { label: "Total Claims Disbursed", value: `₹${totalClaimsDisbursed.toFixed(2)}`, icon: CheckCircle },
+                { label: "Avg. Contribution Score", value: `${avgContributionScore.toFixed(1)}/100`, icon: Award },
               ].map((stat, idx) => (
                 <div key={idx} className="flex items-center justify-between p-3 rounded-2xl bg-matte-black border border-gold-500/5">
                   <div className="flex items-center gap-2.5">
