@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "motion/react";
 import { 
   TrendingUp, 
@@ -10,7 +10,10 @@ import {
   CheckCircle, 
   ChevronRight, 
   Sparkles, 
-  ArrowUpRight 
+  ArrowUpRight,
+  Copy,
+  Check,
+  KeyRound
 } from "lucide-react";
 import { Member, Transaction, Claim } from "../types";
 
@@ -20,6 +23,7 @@ interface CircleDetailsPageProps {
   recentTransactions: Transaction[];
   claims?: Claim[];
   circleCreatedAt?: string;
+  inviteCode?: string;
 }
 
 export const CircleDetailsPage: React.FC<CircleDetailsPageProps> = ({
@@ -27,8 +31,21 @@ export const CircleDetailsPage: React.FC<CircleDetailsPageProps> = ({
   members,
   recentTransactions,
   claims = [],
-  circleCreatedAt
+  circleCreatedAt,
+  inviteCode
 }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyInviteCode = async () => {
+    if (!inviteCode) return;
+    try {
+      await navigator.clipboard.writeText(inviteCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch (err) {
+      console.error("Failed to copy invite code", err);
+    }
+  };
   // Sort members by total contribution for the leaderboard
   const sortedMembers = [...members].sort((a, b) => b.totalContributed - a.totalContributed);
   const totalCircleContributions = members.reduce((sum, m) => sum + m.totalContributed, 0);
@@ -57,6 +74,39 @@ export const CircleDetailsPage: React.FC<CircleDetailsPageProps> = ({
         <h2 className="text-2xl font-bold text-slate-100">Gullak Trust Circle</h2>
         <p className="text-xs text-slate-500 mt-1">Manage, audit and inspect active mutual participants and overall stats</p>
       </div>
+
+      {/* Invite Code Card */}
+      {inviteCode && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-6 rounded-3xl bg-matte-charcoal border border-gold-500/15 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-gold-500/10 rounded-xl text-gold-500 border border-gold-500/20">
+              <KeyRound className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-100">Invite Friends</h3>
+              <p className="text-xs text-slate-500 font-mono">Share this code so others can join your circle</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="px-4 py-2.5 rounded-xl bg-matte-black border border-gold-500/15 text-gold-500 font-mono font-bold tracking-[0.2em] text-sm">
+              {inviteCode}
+            </span>
+            <button
+              type="button"
+              onClick={handleCopyInviteCode}
+              className="p-2.5 rounded-xl bg-gold-500 hover:bg-gold-400 text-matte-black transition-colors"
+              aria-label="Copy invite code"
+            >
+              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            </button>
+          </div>
+        </motion.div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         

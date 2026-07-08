@@ -36,6 +36,7 @@ export default function App() {
 
   const [poolBalance, setPoolBalance] = useState<number>(0);
   const [circleCreatedAt, setCircleCreatedAt] = useState<string | undefined>(undefined);
+  const [circleInviteCode, setCircleInviteCode] = useState<string | undefined>(undefined);
   const [members, setMembers] = useState<Member[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
@@ -114,6 +115,7 @@ export default function App() {
       ]);
       setPoolBalance(Number(circle.pool_balance ?? 0));
       setCircleCreatedAt(circle.created_at);
+      setCircleInviteCode(circle.invite_code);
       setMembers(memberList);
       setTransactions(txList);
       setClaims(claimList);
@@ -305,6 +307,7 @@ export default function App() {
             recentTransactions={transactions}
             claims={claims}
             circleCreatedAt={circleCreatedAt}
+            inviteCode={circleInviteCode}
           />
         );
       case "simulator":

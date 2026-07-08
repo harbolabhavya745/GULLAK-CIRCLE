@@ -12,7 +12,8 @@ import {
   Check, 
   Eye, 
   EyeOff,
-  Info
+  Info,
+  User
 } from "lucide-react";
 
 interface LoginPageProps {
@@ -52,6 +53,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLaunch, isDarkMode, onTo
 }
 const handleSignup = async (e: React.FormEvent) => {
   e.preventDefault()
+  if (!fullName.trim()) {
+    setError("Please enter your full name")
+    return
+  }
+  if (!email) {
+    setError("Please enter your email address")
+    return
+  }
+  if (password.length < 6) {
+    setError("Password must be at least 6 characters")
+    return
+  }
   setError("")
   setIsLoading(true)
 
@@ -68,6 +81,12 @@ const handleSignup = async (e: React.FormEvent) => {
     setIsSuccess(true)
     setTimeout(() => onLaunch(), 800)
   }
+}
+
+const toggleMode = () => {
+  setIsSignup((prev) => !prev)
+  setError("")
+  setPassword("")
 }
 
   return (
@@ -114,13 +133,15 @@ const handleSignup = async (e: React.FormEvent) => {
               transition={{ duration: 0.5 }}
               className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gold-500/5 border border-gold-500/15 text-gold-500 text-[10px] font-mono uppercase tracking-wider mb-2"
             >
-              <Shield className="w-3 h-3" /> Secure Vault Access
+              <Shield className="w-3 h-3" /> {isSignup ? "Join The Circle" : "Secure Vault Access"}
             </motion.div>
             <h2 className="text-3xl font-extrabold tracking-tight text-slate-100 font-sans">
-              Welcome Back
+              {isSignup ? "Create Your Account" : "Welcome Back"}
             </h2>
             <p className="text-xs text-slate-400 max-w-xs mx-auto">
-              Access your trust circle and mutual savings pool with decentralized guarantee.
+              {isSignup
+                ? "Set up your vault identity and start pooling savings with people you trust."
+                : "Access your trust circle and mutual savings pool with decentralized guarantee."}
             </p>
           </div>
 
@@ -147,8 +168,12 @@ const handleSignup = async (e: React.FormEvent) => {
                     <Check className="w-8 h-8 animate-bounce" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-slate-100">Authentication Confirmed</h3>
-                    <p className="text-xs text-slate-400 mt-1">Decrypting your circular vault...</p>
+                    <h3 className="text-lg font-bold text-slate-100">
+                      {isSignup ? "Account Created" : "Authentication Confirmed"}
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {isSignup ? "Setting up your vault access..." : "Decrypting your circular vault..."}
+                    </p>
                   </div>
                 </motion.div>
               ) : isBiometricAuthenticating ? (
@@ -179,8 +204,8 @@ const handleSignup = async (e: React.FormEvent) => {
                 </motion.div>
               ) : (
                 <motion.form 
-                  key="form"
-                  onSubmit={handleLogin} 
+                  key={isSignup ? "signup-form" : "login-form"}
+                  onSubmit={isSignup ? handleSignup : handleLogin} 
                   className="space-y-5"
                 >
                   {error && (
@@ -189,10 +214,32 @@ const handleSignup = async (e: React.FormEvent) => {
                     </div>
                   )}
 
+                  {/* Full Name Field — Sign Up only */}
+                  {isSignup && (
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-mono text-slate-500 uppercase tracking-widest font-bold block">
+                        Full Name
+                      </label>
+                      <div className="relative">
+                        <span className="absolute inset-y-0 left-4 flex items-center text-slate-500">
+                          <User className="w-4 h-4" />
+                        </span>
+                        <input
+                          type="text"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          placeholder="Your full name"
+                          className="w-full pl-11 pr-4 py-3 bg-matte-black/50 border border-gold-500/15 rounded-2xl text-slate-100 placeholder-slate-600 focus:outline-none focus:border-gold-500/50 transition-all text-sm font-sans"
+                          required
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   {/* Registered Email Field */}
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-mono text-slate-500 uppercase tracking-widest font-bold block">
-                      Registered Email Address
+                      {isSignup ? "Email Address" : "Registered Email Address"}
                     </label>
                     <div className="relative">
                       <span className="absolute inset-y-0 left-4 flex items-center text-slate-500">
@@ -213,7 +260,7 @@ const handleSignup = async (e: React.FormEvent) => {
                   <div className="space-y-1.5">
                     <div className="flex justify-between items-center">
                       <label className="text-[10px] font-mono text-slate-500 uppercase tracking-widest font-bold">
-                        Circle Passcode
+                        {isSignup ? "Create Passcode" : "Circle Passcode"}
                       </label>
                       <button
                         type="button"
@@ -236,9 +283,12 @@ const handleSignup = async (e: React.FormEvent) => {
                         required
                       />
                     </div>
+                    {isSignup && (
+                      <p className="text-[10px] text-slate-500 pl-1">Minimum 6 characters.</p>
+                    )}
                   </div>
 
-                  {/* Primary Login Button */}
+                  {/* Primary Login/Signup Button */}
                   <button
                     type="submit"
                     disabled={isLoading}
@@ -246,12 +296,28 @@ const handleSignup = async (e: React.FormEvent) => {
                   >
                     {isLoading ? (
                       <div className="w-4 h-4 border-2 border-matte-black border-t-transparent rounded-full animate-spin" />
+                    ) : isSignup ? (
+                      <>
+                        Create Account <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-0.5 transition-transform" />
+                      </>
                     ) : (
                       <>
                         Unlock Circle <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-0.5 transition-transform" />
                       </>
                     )}
                   </button>
+
+                  {/* Mode Toggle */}
+                  <p className="text-center text-xs text-slate-500">
+                    {isSignup ? "Already have a circle account?" : "New to Gullak Circle?"}{" "}
+                    <button
+                      type="button"
+                      onClick={toggleMode}
+                      className="text-gold-500 hover:text-gold-400 font-bold transition-colors cursor-pointer"
+                    >
+                      {isSignup ? "Log In" : "Sign Up"}
+                    </button>
+                  </p>
 
                   {/* Biometric Integration Option */}
                   <div className="relative flex py-2 items-center">
