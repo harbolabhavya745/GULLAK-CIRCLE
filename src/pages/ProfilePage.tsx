@@ -15,7 +15,9 @@ import {
   X,
   Wallet,
   Shield,
-  Users
+  Users,
+  LogOut,
+  AlertTriangle
 } from "lucide-react";
 import { Member, Claim, Transaction } from "../types";
 
@@ -25,10 +27,28 @@ interface ProfilePageProps {
   profile: any;
   email?: string;
   myTransactions?: Transaction[];
+  onLeaveCircle?: () => Promise<void>;
 }
 
-export const ProfilePage: React.FC<ProfilePageProps> = ({ claims, poolBalance, profile, email, myTransactions = [] }) => {
+export const ProfilePage: React.FC<ProfilePageProps> = ({ claims, poolBalance, profile, email, myTransactions = [], onLeaveCircle }) => {
   const [showFastTrackInfo, setShowFastTrackInfo] = React.useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = React.useState(false);
+  const [isLeaving, setIsLeaving] = React.useState(false);
+  const [leaveError, setLeaveError] = React.useState("");
+
+  const handleConfirmLeave = async () => {
+    if (!onLeaveCircle) return;
+    setIsLeaving(true);
+    setLeaveError("");
+    try {
+      await onLeaveCircle();
+      setShowLeaveConfirm(false);
+    } catch (err: any) {
+      setLeaveError(err.message || "Couldn't leave the circle. Try again.");
+    } finally {
+      setIsLeaving(false);
+    }
+  };
 
   const user = {
     name: profile?.name || "Loading...",
@@ -252,6 +272,30 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ claims, poolBalance, p
         )}
       </div>
 
+      {/* Danger Zone: Leave Circle */}
+      {onLeaveCircle && (
+        <div className="p-6 md:p-8 rounded-3xl bg-matte-charcoal border border-red-500/15 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-red-500/10 rounded-xl text-red-400 border border-red-500/20">
+              <LogOut className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-100">Leave Circle</h3>
+              <p className="text-xs text-slate-500 font-mono">
+                You'll lose access to this circle's pool and history. You can rejoin later with an invite code.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowLeaveConfirm(true)}
+            className="px-5 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/25 font-bold text-xs font-mono uppercase tracking-wider transition-colors whitespace-nowrap"
+          >
+            Leave Circle
+          </button>
+        </div>
+      )}
+
       {/* Fast Track Approval detailed info modal */}
       {showFastTrackInfo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-matte-black/80 backdrop-blur-md">
@@ -334,6 +378,59 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ claims, poolBalance, p
             >
               Close
             </button>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Leave Circle confirmation modal */}
+      {showLeaveConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-matte-black/80 backdrop-blur-md">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-sm p-6 rounded-3xl bg-matte-charcoal border border-red-500/20 shadow-xl space-y-5 relative"
+          >
+            <button
+              onClick={() => setShowLeaveConfirm(false)}
+              disabled={isLeaving}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-100 transition-colors disabled:opacity-50"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-red-500/10 rounded-2xl text-red-400">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-100 font-heading">Leave this circle?</h3>
+                <p className="text-xs text-slate-500 font-mono mt-0.5">This can't be undone from here</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-400 leading-relaxed">
+              You'll be removed from the circle immediately and lose access to its pool balance, claims,
+              and member activity. Someone will need to share an invite code for you to rejoin.
+            </p>
+
+            {leaveError && <p className="text-xs text-red-400">{leaveError}</p>}
+
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={() => setShowLeaveConfirm(false)}
+                disabled={isLeaving}
+                className="flex-1 py-2.5 bg-matte-black hover:bg-matte-black/70 text-slate-300 font-bold rounded-2xl transition-all text-xs font-mono uppercase tracking-wider border border-gold-500/10 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmLeave}
+                disabled={isLeaving}
+                className="flex-1 py-2.5 bg-red-500 hover:bg-red-400 disabled:opacity-60 text-matte-black font-bold rounded-2xl transition-all text-xs font-mono uppercase tracking-wider flex items-center justify-center gap-2"
+              >
+                {isLeaving ? <Zap className="w-4 h-4 animate-spin" /> : "Yes, Leave"}
+              </button>
+            </div>
           </motion.div>
         </div>
       )}
