@@ -63,6 +63,31 @@ export async function ensureProfile(user: { id: string; email?: string; user_met
   return data;
 }
 
+// Uploads a new avatar image to Supabase Storage and updates the profile row.
+// Requires a public storage bucket named "avatars" (see project README/setup notes).
+export async function updateAvatar(userId: string, file: File): Promise<string> {
+  const fileExt = file.name.split(".").pop() || "jpg";
+  const filePath = `${userId}/${Date.now()}.${fileExt}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("avatars")
+    .upload(filePath, file, { upsert: true, cacheControl: "3600" });
+  if (uploadError) throw uploadError;
+
+  const { data: publicUrlData } = supabase.storage
+    .from("avatars")
+    .getPublicUrl(filePath);
+  const avatarUrl = publicUrlData.publicUrl;
+
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({ avatar_url: avatarUrl })
+    .eq("id", userId);
+  if (updateError) throw updateError;
+
+  return avatarUrl;
+}
+
 export async function fetchMyCircleId(userId: string): Promise<string | null> {
   const { data, error } = await supabase
     .from("circle_members")
