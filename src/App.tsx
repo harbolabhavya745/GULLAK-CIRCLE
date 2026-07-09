@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { supabase } from "./lib/supabase";
 import {
   ensureProfile,
+  updateAvatar,
   fetchMyCircleId,
   createCircle,
   joinCircleByInviteCode,
@@ -328,6 +329,20 @@ export default function App() {
     setActivePage("dashboard");
   };
 
+  // 4c. Update profile picture
+  const [avatarUploadError, setAvatarUploadError] = useState("");
+  const handleUpdateAvatar = async (file: File) => {
+    if (!currentUser) return;
+    setAvatarUploadError("");
+    try {
+      const avatarUrl = await updateAvatar(currentUser.id, file);
+      setCurrentProfile((prev: any) => (prev ? { ...prev, avatar_url: avatarUrl } : prev));
+    } catch (err: any) {
+      console.error("Failed to update avatar", err);
+      setAvatarUploadError(err?.message || "Couldn't update your profile picture. Please try again.");
+    }
+  };
+
   // 5. Notifications (kept client-side only — there's no notifications table in the DB)
   const handleClearNotifications = () => setNotifications([]);
   const handleMarkNotificationsRead = () =>
@@ -401,6 +416,8 @@ export default function App() {
             memberCount={members.length}
             onLeaveCircle={handleLeaveCircle}
             leaveCircleError={leaveCircleError}
+            onUpdateAvatar={handleUpdateAvatar}
+            avatarUploadError={avatarUploadError}
           />
         );
       default:

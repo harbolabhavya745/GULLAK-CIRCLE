@@ -17,7 +17,8 @@ import {
   Shield,
   Users,
   LogOut,
-  AlertTriangle
+  AlertTriangle,
+  Camera
 } from "lucide-react";
 import { Member, Claim, Transaction } from "../types";
 
@@ -30,12 +31,48 @@ interface ProfilePageProps {
   memberCount?: number;
   onLeaveCircle?: () => Promise<void> | void;
   leaveCircleError?: string;
+  onUpdateAvatar?: (file: File) => Promise<void> | void;
+  avatarUploadError?: string;
 }
 
-export const ProfilePage: React.FC<ProfilePageProps> = ({ claims, poolBalance, profile, email, myTransactions = [], memberCount = 0, onLeaveCircle, leaveCircleError = "" }) => {
+export const ProfilePage: React.FC<ProfilePageProps> = ({ claims, poolBalance, profile, email, myTransactions = [], memberCount = 0, onLeaveCircle, leaveCircleError = "", onUpdateAvatar, avatarUploadError = "" }) => {
   const [showFastTrackInfo, setShowFastTrackInfo] = React.useState(false);
   const [showLeaveModal, setShowLeaveModal] = React.useState(false);
   const [isLeaving, setIsLeaving] = React.useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = React.useState(false);
+  const [localAvatarError, setLocalAvatarError] = React.useState("");
+  const avatarInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleAvatarClick = () => {
+    if (isUploadingAvatar) return;
+    avatarInputRef.current?.click();
+  };
+
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+
+    setLocalAvatarError("");
+
+    if (!file.type.startsWith("image/")) {
+      setLocalAvatarError("Please choose an image file.");
+      return;
+    }
+    const MAX_SIZE_MB = 5;
+    if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+      setLocalAvatarError(`Image must be smaller than ${MAX_SIZE_MB}MB.`);
+      return;
+    }
+    if (!onUpdateAvatar) return;
+
+    setIsUploadingAvatar(true);
+    try {
+      await onUpdateAvatar(file);
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
 
   const handleConfirmLeave = async () => {
     if (!onLeaveCircle) return;
@@ -70,13 +107,38 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ claims, poolBalance, p
         className="p-6 md:p-8 rounded-3xl bg-matte-charcoal border border-gold-500/15 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6"
       >
         <div className="flex flex-col md:flex-row items-center gap-6 text-center md:text-left">
-          <div className="relative p-0.5 rounded-[24px] bg-gradient-to-br from-gold-300 via-gold-500 to-gold-700 shadow-xl shadow-gold-500/15 ring-4 ring-gold-500/5">
-            <img
-              src={user.avatar}
-              alt={user.name}
-              referrerPolicy="no-referrer"
-              className="w-20 h-20 rounded-[22px] object-cover"
-            />
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={handleAvatarClick}
+              disabled={isUploadingAvatar}
+              aria-label="Change profile picture"
+              className="relative block p-0.5 rounded-[24px] bg-gradient-to-br from-gold-300 via-gold-500 to-gold-700 shadow-xl shadow-gold-500/15 ring-4 ring-gold-500/5 group cursor-pointer disabled:cursor-wait"
+            >
+              <img
+                src={user.avatar}
+                alt={user.name}
+                referrerPolicy="no-referrer"
+                className="w-20 h-20 rounded-[22px] object-cover"
+              />
+              <div className="absolute inset-0.5 rounded-[22px] bg-matte-black/0 group-hover:bg-matte-black/55 flex items-center justify-center transition-all duration-200">
+                {isUploadingAvatar ? (
+                  <div className="w-5 h-5 border-2 border-gold-500 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Camera className="w-5 h-5 text-gold-200 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                )}
+              </div>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarFileChange}
+                className="hidden"
+              />
+            </button>
+            {(localAvatarError || avatarUploadError) && (
+              <p className="text-[10px] text-red-400 font-mono max-w-[9rem]">{localAvatarError || avatarUploadError}</p>
+            )}
           </div>
           <div className="space-y-2">
             <div className="flex flex-wrap gap-2.5 items-center justify-center md:justify-start">
