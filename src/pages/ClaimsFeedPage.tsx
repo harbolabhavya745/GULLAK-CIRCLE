@@ -44,11 +44,14 @@ export const ClaimsFeedPage: React.FC<ClaimsFeedPageProps> = ({
   const filteredClaims = claims.filter((c) => c.status === activeTab);
 
   const handleVote = (claimId: string, choice: "yes" | "no") => {
-    onVoteClaim(claimId, choice);
-    
     // Find the claim to check if the new vote triggers approval threshold (> 50%)
     const currentClaim = claims.find(c => c.id === claimId);
     if (!currentClaim) return;
+
+    // Block claimants from voting on their own claim
+    if (currentUserId && currentClaim.claimantId === currentUserId) return;
+
+    onVoteClaim(claimId, choice);
 
     // Simulate standard quorum where total active voters (excluding claimant) is around 5.
     // If YES votes becomes >= 3, let's trigger the Payout modal flow!
@@ -130,6 +133,7 @@ export const ClaimsFeedPage: React.FC<ClaimsFeedPageProps> = ({
           {filteredClaims.map((claim) => {
             const approvalPercent = Math.min(((claim.votesYes) / 3) * 100, 100);
             const userHasVoted = currentUserId && claim.votedMembers[currentUserId] !== undefined;
+            const isClaimant = currentUserId === claim.claimantId;
 
             return (
               <motion.div
@@ -217,7 +221,11 @@ export const ClaimsFeedPage: React.FC<ClaimsFeedPageProps> = ({
                 {/* Voting Actions */}
                 {claim.status === "Pending" && (
                   <div className="pt-3 border-t border-gold-500/10 flex items-center justify-between gap-4">
-                    {userHasVoted ? (
+                    {isClaimant ? (
+                      <span className="text-xs text-slate-500 italic flex items-center gap-1">
+                        <Info className="w-4 h-4 text-gold-500/50" /> You can't vote on your own claim
+                      </span>
+                    ) : userHasVoted ? (
                       <span className="text-xs text-slate-500 italic flex items-center gap-1">
                         <Info className="w-4 h-4 text-gold-500/50" /> You casted ballot: {currentUserId ? claim.votedMembers[currentUserId]?.toUpperCase() : ""}
                       </span>
@@ -225,22 +233,24 @@ export const ClaimsFeedPage: React.FC<ClaimsFeedPageProps> = ({
                       <span className="text-xs text-slate-500 font-medium">Cast trust ballot:</span>
                     )}
 
-                    <div className="flex gap-2">
-                      <button
-                        disabled={userHasVoted}
-                        onClick={() => handleVote(claim.id, "no")}
-                        className="px-4 py-2 bg-red-500/5 hover:bg-red-500/10 border border-red-500/15 text-red-500 text-xs font-bold rounded-xl flex items-center gap-1.5 disabled:opacity-40 transition-all cursor-pointer"
-                      >
-                        <ThumbsDown className="w-3.5 h-3.5" /> No ({claim.votesNo})
-                      </button>
-                      <button
-                        disabled={userHasVoted}
-                        onClick={() => handleVote(claim.id, "yes")}
-                        className="px-5 py-2.5 bg-gold-500 hover:bg-gold-400 text-matte-black text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-md shadow-gold-500/10 disabled:opacity-40 transition-all cursor-pointer"
-                      >
-                        <ThumbsUp className="w-3.5 h-3.5" /> Yes ({claim.votesYes})
-                      </button>
-                    </div>
+                    {!isClaimant && (
+                      <div className="flex gap-2">
+                        <button
+                          disabled={userHasVoted}
+                          onClick={() => handleVote(claim.id, "no")}
+                          className="px-4 py-2 bg-red-500/5 hover:bg-red-500/10 border border-red-500/15 text-red-500 text-xs font-bold rounded-xl flex items-center gap-1.5 disabled:opacity-40 transition-all cursor-pointer"
+                        >
+                          <ThumbsDown className="w-3.5 h-3.5" /> No ({claim.votesNo})
+                        </button>
+                        <button
+                          disabled={userHasVoted}
+                          onClick={() => handleVote(claim.id, "yes")}
+                          className="px-5 py-2.5 bg-gold-500 hover:bg-gold-400 text-matte-black text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-md shadow-gold-500/10 disabled:opacity-40 transition-all cursor-pointer"
+                        >
+                          <ThumbsUp className="w-3.5 h-3.5" /> Yes ({claim.votesYes})
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 

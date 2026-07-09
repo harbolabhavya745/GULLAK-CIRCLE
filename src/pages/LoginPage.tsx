@@ -12,8 +12,7 @@ import {
   Check, 
   Eye, 
   EyeOff,
-  Info,
-  User
+  Info
 } from "lucide-react";
 
 interface LoginPageProps {
@@ -32,6 +31,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLaunch, isDarkMode, onTo
   const [isSuccess, setIsSuccess] = useState(false);
   const [fullName, setFullName] = useState("")
   const [isSignup, setIsSignup] = useState(false)
+  const [needsEmailConfirm, setNeedsEmailConfirm] = useState(false)
+
+  const resetFormState = () => {
+    setError("")
+    setPassword("")
+  }
+
+  const toggleMode = () => {
+    setIsSignup((prev) => !prev)
+    resetFormState()
+    setNeedsEmailConfirm(false)
+  }
+
   const handleLogin = async (e: React.FormEvent) => {
   e.preventDefault()
   if (!email) {
@@ -54,11 +66,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLaunch, isDarkMode, onTo
 const handleSignup = async (e: React.FormEvent) => {
   e.preventDefault()
   if (!fullName.trim()) {
-    setError("Please enter your full name")
-    return
-  }
-  if (!email) {
-    setError("Please enter your email address")
+    setError("Please enter your name")
     return
   }
   if (password.length < 6) {
@@ -68,7 +76,7 @@ const handleSignup = async (e: React.FormEvent) => {
   setError("")
   setIsLoading(true)
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: { data: { name: fullName } }
@@ -77,16 +85,14 @@ const handleSignup = async (e: React.FormEvent) => {
   if (error) {
     setError(error.message)
     setIsLoading(false)
+  } else if (!data.session) {
+    // Email confirmation is required before a session exists
+    setIsLoading(false)
+    setNeedsEmailConfirm(true)
   } else {
     setIsSuccess(true)
     setTimeout(() => onLaunch(), 800)
   }
-}
-
-const toggleMode = () => {
-  setIsSignup((prev) => !prev)
-  setError("")
-  setPassword("")
 }
 
   return (
@@ -133,14 +139,14 @@ const toggleMode = () => {
               transition={{ duration: 0.5 }}
               className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gold-500/5 border border-gold-500/15 text-gold-500 text-[10px] font-mono uppercase tracking-wider mb-2"
             >
-              <Shield className="w-3 h-3" /> {isSignup ? "Join The Circle" : "Secure Vault Access"}
+              <Shield className="w-3 h-3" /> Secure Vault Access
             </motion.div>
             <h2 className="text-3xl font-extrabold tracking-tight text-slate-100 font-sans">
-              {isSignup ? "Create Your Account" : "Welcome Back"}
+              {isSignup ? "Create Your Circle" : "Welcome Back"}
             </h2>
             <p className="text-xs text-slate-400 max-w-xs mx-auto">
               {isSignup
-                ? "Set up your vault identity and start pooling savings with people you trust."
+                ? "Join a trust circle and start your mutual savings pool with roundup protection."
                 : "Access your trust circle and mutual savings pool with decentralized guarantee."}
             </p>
           </div>
@@ -156,7 +162,36 @@ const toggleMode = () => {
             <div className="absolute -top-12 -right-12 w-32 h-32 bg-gold-500/5 rounded-full blur-2xl pointer-events-none group-hover:bg-gold-500/10 transition-colors" />
 
             <AnimatePresence mode="wait">
-              {isSuccess ? (
+              {needsEmailConfirm ? (
+                <motion.div
+                  key="confirm-email"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="py-10 flex flex-col items-center justify-center text-center space-y-4"
+                >
+                  <div className="w-16 h-16 rounded-full bg-gold-500/10 border border-gold-500/30 flex items-center justify-center text-gold-500 shadow-xl shadow-gold-500/10">
+                    <Mail className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-100">Confirm Your Email</h3>
+                    <p className="text-xs text-slate-400 mt-1 max-w-[260px]">
+                      We've sent a confirmation link to <span className="text-gold-500">{email}</span>. Verify it, then log in below.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNeedsEmailConfirm(false);
+                      setIsSignup(false);
+                      resetFormState();
+                    }}
+                    className="px-4 py-1.5 rounded-lg border border-gold-500/10 text-gold-500 hover:text-gold-400 transition-colors text-xs font-mono uppercase"
+                  >
+                    Back to Login
+                  </button>
+                </motion.div>
+              ) : isSuccess ? (
                 <motion.div 
                   key="success"
                   initial={{ opacity: 0, scale: 0.95 }}
@@ -168,12 +203,8 @@ const toggleMode = () => {
                     <Check className="w-8 h-8 animate-bounce" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-slate-100">
-                      {isSignup ? "Account Created" : "Authentication Confirmed"}
-                    </h3>
-                    <p className="text-xs text-slate-400 mt-1">
-                      {isSignup ? "Setting up your vault access..." : "Decrypting your circular vault..."}
-                    </p>
+                    <h3 className="text-lg font-bold text-slate-100">Authentication Confirmed</h3>
+                    <p className="text-xs text-slate-400 mt-1">Decrypting your circular vault...</p>
                   </div>
                 </motion.div>
               ) : isBiometricAuthenticating ? (
@@ -204,8 +235,8 @@ const toggleMode = () => {
                 </motion.div>
               ) : (
                 <motion.form 
-                  key={isSignup ? "signup-form" : "login-form"}
-                  onSubmit={isSignup ? handleSignup : handleLogin} 
+                  key="form"
+                  onSubmit={handleLogin} 
                   className="space-y-5"
                 >
                   {error && (
@@ -214,32 +245,10 @@ const toggleMode = () => {
                     </div>
                   )}
 
-                  {/* Full Name Field — Sign Up only */}
-                  {isSignup && (
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-mono text-slate-500 uppercase tracking-widest font-bold block">
-                        Full Name
-                      </label>
-                      <div className="relative">
-                        <span className="absolute inset-y-0 left-4 flex items-center text-slate-500">
-                          <User className="w-4 h-4" />
-                        </span>
-                        <input
-                          type="text"
-                          value={fullName}
-                          onChange={(e) => setFullName(e.target.value)}
-                          placeholder="Your full name"
-                          className="w-full pl-11 pr-4 py-3 bg-matte-black/50 border border-gold-500/15 rounded-2xl text-slate-100 placeholder-slate-600 focus:outline-none focus:border-gold-500/50 transition-all text-sm font-sans"
-                          required
-                        />
-                      </div>
-                    </div>
-                  )}
-
                   {/* Registered Email Field */}
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-mono text-slate-500 uppercase tracking-widest font-bold block">
-                      {isSignup ? "Email Address" : "Registered Email Address"}
+                      Registered Email Address
                     </label>
                     <div className="relative">
                       <span className="absolute inset-y-0 left-4 flex items-center text-slate-500">
@@ -260,7 +269,7 @@ const toggleMode = () => {
                   <div className="space-y-1.5">
                     <div className="flex justify-between items-center">
                       <label className="text-[10px] font-mono text-slate-500 uppercase tracking-widest font-bold">
-                        {isSignup ? "Create Passcode" : "Circle Passcode"}
+                        Circle Passcode
                       </label>
                       <button
                         type="button"
@@ -283,12 +292,9 @@ const toggleMode = () => {
                         required
                       />
                     </div>
-                    {isSignup && (
-                      <p className="text-[10px] text-slate-500 pl-1">Minimum 6 characters.</p>
-                    )}
                   </div>
 
-                  {/* Primary Login/Signup Button */}
+                  {/* Primary Login Button */}
                   <button
                     type="submit"
                     disabled={isLoading}
@@ -296,28 +302,12 @@ const toggleMode = () => {
                   >
                     {isLoading ? (
                       <div className="w-4 h-4 border-2 border-matte-black border-t-transparent rounded-full animate-spin" />
-                    ) : isSignup ? (
-                      <>
-                        Create Account <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-0.5 transition-transform" />
-                      </>
                     ) : (
                       <>
                         Unlock Circle <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-0.5 transition-transform" />
                       </>
                     )}
                   </button>
-
-                  {/* Mode Toggle */}
-                  <p className="text-center text-xs text-slate-500">
-                    {isSignup ? "Already have a circle account?" : "New to Gullak Circle?"}{" "}
-                    <button
-                      type="button"
-                      onClick={toggleMode}
-                      className="text-gold-500 hover:text-gold-400 font-bold transition-colors cursor-pointer"
-                    >
-                      {isSignup ? "Log In" : "Sign Up"}
-                    </button>
-                  </p>
 
                   {/* Biometric Integration Option */}
                   <div className="relative flex py-2 items-center">

@@ -36,7 +36,6 @@ export default function App() {
 
   const [poolBalance, setPoolBalance] = useState<number>(0);
   const [circleCreatedAt, setCircleCreatedAt] = useState<string | undefined>(undefined);
-  const [circleInviteCode, setCircleInviteCode] = useState<string | undefined>(undefined);
   const [members, setMembers] = useState<Member[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
@@ -115,7 +114,6 @@ export default function App() {
       ]);
       setPoolBalance(Number(circle.pool_balance ?? 0));
       setCircleCreatedAt(circle.created_at);
-      setCircleInviteCode(circle.invite_code);
       setMembers(memberList);
       setTransactions(txList);
       setClaims(claimList);
@@ -226,11 +224,33 @@ export default function App() {
   // 3. Vote
   const handleVoteClaim = async (claimId: string, choice: "yes" | "no") => {
     if (!currentUser) return;
-    await supabase.from("votes").insert({
+
+    const { error: voteError } = await supabase.from("votes").insert({
       claim_id: claimId,
       voter_id: currentUser.id,
       choice,
     });
+
+    if (voteError) {
+      console.error("Vote failed", voteError);
+
+      let message = "Your vote couldn't be recorded. Please try again.";
+      if (voteError.code === "23505") {
+        message = "You've already voted on this claim.";
+      } else if (voteError.message?.includes("cannot vote on your own claim")) {
+        message = "You can't vote on your own claim.";
+      }
+
+      const errorNotif: NotificationItem = {
+        id: "notif-" + Date.now(),
+        message,
+        time: "Just now",
+        type: "system",
+        unread: true,
+      };
+      setNotifications((prev) => [errorNotif, ...prev]);
+      return;
+    }
 
     const targetClaim = claims.find((c) => c.id === claimId);
     if (targetClaim) {
@@ -276,6 +296,38 @@ export default function App() {
     await loadCircleData();
   };
 
+  // 4b. Leave Circle
+  const [leaveCircleError, setLeaveCircleError] = useState("");
+  const handleLeaveCircle = async () => {
+    if (!currentUser || !activeCircleId) return;
+
+    setLeaveCircleError("");
+
+    const { error } = await supabase
+      .from("circle_members")
+      .delete()
+      .eq("circle_id", activeCircleId)
+      .eq("user_id", currentUser.id);
+
+    if (error) {
+      console.error("Failed to leave circle", error);
+      setLeaveCircleError(
+        error.message.includes("row-level security")
+          ? "You don't have permission to leave this circle."
+          : "Couldn't leave the circle. Please try again."
+      );
+      return;
+    }
+
+    // Reset all circle-scoped state so stale data doesn't flash
+    setActiveCircleId(null);
+    setMembers([]);
+    setTransactions([]);
+    setClaims([]);
+    setPoolBalance(0);
+    setActivePage("dashboard");
+  };
+
   // 5. Notifications (kept client-side only — there's no notifications table in the DB)
   const handleClearNotifications = () => setNotifications([]);
   const handleMarkNotificationsRead = () =>
@@ -307,7 +359,6 @@ export default function App() {
             recentTransactions={transactions}
             claims={claims}
             circleCreatedAt={circleCreatedAt}
-            inviteCode={circleInviteCode}
           />
         );
       case "simulator":
@@ -347,6 +398,9 @@ export default function App() {
             profile={currentProfile}
             email={currentUser?.email}
             myTransactions={transactions.filter((t) => t.userId === currentUser?.id)}
+            memberCount={members.length}
+            onLeaveCircle={handleLeaveCircle}
+            leaveCircleError={leaveCircleError}
           />
         );
       default:
