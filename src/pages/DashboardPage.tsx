@@ -6,7 +6,6 @@ import {
   ShieldAlert, 
   ArrowUpRight, 
   Activity, 
-  Sparkles, 
   PlusCircle, 
   ChevronRight, 
   CheckCircle,
@@ -87,9 +86,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
         <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
           <div className="md:col-span-2 space-y-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gold-500/10 text-gold-500 text-xs font-semibold border border-gold-500/20 font-mono tracking-wider uppercase">
-              <Sparkles className="w-3.5 h-3.5 text-gold-500 animate-pulse" /> National Hackathon Preview
-            </div>
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-100">
               Welcome back to Gullak Circle!
             </h2>
