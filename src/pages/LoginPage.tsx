@@ -12,7 +12,8 @@ import {
   Check, 
   Eye, 
   EyeOff,
-  Info
+  Info,
+  Chrome
 } from "lucide-react";
 
 interface LoginPageProps {
@@ -32,6 +33,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLaunch, isDarkMode, onTo
   const [fullName, setFullName] = useState("")
   const [isSignup, setIsSignup] = useState(false)
   const [needsEmailConfirm, setNeedsEmailConfirm] = useState(false)
+  const [oauthLoading, setOauthLoading] = useState<"google" | null>(null)
 
   const resetFormState = () => {
     setError("")
@@ -93,6 +95,21 @@ const handleSignup = async (e: React.FormEvent) => {
     setIsSuccess(true)
     setTimeout(() => onLaunch(), 800)
   }
+}
+
+const handleOAuthLogin = async (provider: "google") => {
+  setError("")
+  setOauthLoading(provider)
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: { redirectTo: window.location.origin }
+  })
+  if (error) {
+    setError(error.message)
+    setOauthLoading(null)
+  }
+  // On success, Supabase redirects the browser to the provider, so no further
+  // state change is needed here.
 }
 
   return (
@@ -315,6 +332,22 @@ const handleSignup = async (e: React.FormEvent) => {
                     <span className="flex-shrink mx-4 text-[9px] font-mono text-slate-600 uppercase tracking-widest font-bold">Or authenticate with</span>
                     <div className="flex-grow border-t border-gold-500/5"></div>
                   </div>
+
+                  {/* Social Auth Options */}
+                  <button
+                    type="button"
+                    onClick={() => handleOAuthLogin("google")}
+                    disabled={oauthLoading !== null}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-matte-black/50 border border-gold-500/15 text-slate-300 hover:text-gold-500 hover:border-gold-500/40 transition-all disabled:opacity-50 text-xs font-mono uppercase tracking-widest font-bold"
+                  >
+                    {oauthLoading === "google" ? (
+                      <div className="w-4 h-4 border-2 border-slate-500 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Chrome className="w-4 h-4" /> Continue with Google
+                      </>
+                    )}
+                  </button>
 
                 </motion.form>
               )}

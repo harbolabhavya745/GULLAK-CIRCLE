@@ -1,4 +1,5 @@
 import React from "react";
+import { supabase } from "../lib/supabase";
 import { 
   Coins, 
   LayoutDashboard, 
@@ -47,6 +48,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const handleItemClick = (id: string) => {
     onNavigate(id);
     onClose(); // close mobile drawer if open
+  };
+
+  const handleLogout = async () => {
+    onClose();
+    await supabase.auth.signOut();
   };
 
   return (
@@ -134,12 +140,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
           </div>
 
-          {/* Back to landing link */}
+          {/* Log out */}
           <button
-            onClick={() => handleItemClick("landing")}
+            onClick={handleLogout}
             className="w-full px-4 py-2.5 rounded-xl border border-slate-200/50 dark:border-gold-500/10 hover:bg-slate-50 dark:hover:bg-matte-gray text-xs font-semibold text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 flex items-center justify-center gap-1.5 cursor-pointer"
           >
-            <LogOut className="w-3.5 h-3.5" /> Back to Pitch Screen
+            <LogOut className="w-3.5 h-3.5" /> Log Out
           </button>
 
         </div>
