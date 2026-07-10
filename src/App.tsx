@@ -4,6 +4,8 @@ import { supabase } from "./lib/supabase";
 import {
   ensureProfile,
   updateAvatar,
+  submitClaimWithAiCheck,
+  updateMilestone,
   fetchMyCircleId,
   createCircle,
   joinCircleByInviteCode,
@@ -36,6 +38,7 @@ export default function App() {
   const [confettiTrigger, setConfettiTrigger] = useState<boolean>(false);
 
   const [poolBalance, setPoolBalance] = useState<number>(0);
+  const [milestoneTarget, setMilestoneTarget] = useState<number>(30000);
   const [circleCreatedAt, setCircleCreatedAt] = useState<string | undefined>(undefined);
   const [members, setMembers] = useState<Member[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -114,6 +117,7 @@ export default function App() {
         fetchClaims(activeCircleId),
       ]);
       setPoolBalance(Number(circle.pool_balance ?? 0));
+      setMilestoneTarget(Number(circle.milestone_target ?? 30000));
       setCircleCreatedAt(circle.created_at);
       setMembers(memberList);
       setTransactions(txList);
@@ -191,19 +195,16 @@ export default function App() {
 
   // 2. Submit claim
   const handleSubmitClaim = async (reason: string, amount: number, description: string, filename: string) => {
-    if (!currentUser || !activeCircleId) return;
+    if (!currentUser || !activeCircleId || !currentProfile) return;
 
-    await supabase.from("claims").insert({
-      circle_id: activeCircleId,
-      claimant_id: currentUser.id,
+    await submitClaimWithAiCheck({
+      circleId: activeCircleId,
+      claimantId: currentUser.id,
+      claimantScore: currentProfile.score ?? 0,
       reason,
       amount,
       description,
-      receipt_url: filename,
-      status: "Pending",
-      payout_status: "Awaiting Vote",
-      votes_yes: 0,
-      votes_no: 0,
+      receiptUrl: filename,
     });
 
     const claimNotif: NotificationItem = {
@@ -343,6 +344,22 @@ export default function App() {
     }
   };
 
+  // 4d. Update circle milestone target (editable from Dashboard)
+  const [milestoneUpdateError, setMilestoneUpdateError] = useState("");
+  const handleUpdateMilestone = async (newTarget: number) => {
+    if (!activeCircleId) return;
+    setMilestoneUpdateError("");
+    const prevTarget = milestoneTarget;
+    setMilestoneTarget(newTarget); // optimistic update
+    try {
+      await updateMilestone(activeCircleId, newTarget);
+    } catch (err: any) {
+      console.error("Failed to update milestone", err);
+      setMilestoneTarget(prevTarget); // roll back
+      setMilestoneUpdateError(err?.message || "Couldn't update the milestone. Please try again.");
+    }
+  };
+
   // 5. Notifications (kept client-side only — there's no notifications table in the DB)
   const handleClearNotifications = () => setNotifications([]);
   const handleMarkNotificationsRead = () =>
@@ -364,6 +381,9 @@ export default function App() {
             poolStats={poolStats}
             onNavigate={setActivePage}
             isDarkMode={isDarkMode}
+            milestoneTarget={milestoneTarget}
+            onUpdateMilestone={handleUpdateMilestone}
+            milestoneUpdateError={milestoneUpdateError}
           />
         );
       case "circle":
@@ -383,6 +403,7 @@ export default function App() {
             recentTransactions={transactions}
             onSimulateRoundup={handleSimulateRoundup}
             triggerConfetti={handleTriggerConfetti}
+            milestoneTarget={milestoneTarget}
           />
         );
       case "submit-claim":
@@ -430,6 +451,9 @@ export default function App() {
             poolStats={poolStats}
             onNavigate={setActivePage}
             isDarkMode={isDarkMode}
+            milestoneTarget={milestoneTarget}
+            onUpdateMilestone={handleUpdateMilestone}
+            milestoneUpdateError={milestoneUpdateError}
           />
         );
     }

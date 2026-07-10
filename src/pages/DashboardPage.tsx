@@ -6,13 +6,17 @@ import {
   ShieldAlert, 
   ArrowUpRight, 
   Activity, 
+  Sparkles, 
   PlusCircle, 
   ChevronRight, 
   CheckCircle,
   Clock,
   PiggyBank,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  Pencil,
+  Check,
+  X
 } from "lucide-react";
 import { Member, Transaction, Claim, PoolStats } from "../types";
 
@@ -24,6 +28,9 @@ interface DashboardPageProps {
   poolStats: PoolStats;
   onNavigate: (page: string) => void;
   isDarkMode: boolean;
+  milestoneTarget: number;
+  onUpdateMilestone: (newTarget: number) => Promise<void> | void;
+  milestoneUpdateError?: string;
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({
@@ -33,11 +40,47 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   pendingClaims,
   poolStats,
   onNavigate,
-  isDarkMode
+  isDarkMode,
+  milestoneTarget,
+  onUpdateMilestone,
+  milestoneUpdateError = ""
 }) => {
   // Simple calculated metrics
-  const nextMilestone = 30000;
-  const milestoneProgress = Math.min((poolBalance / nextMilestone) * 100, 100);
+  const milestoneProgress = Math.min((poolBalance / milestoneTarget) * 100, 100);
+
+  const [isEditingMilestone, setIsEditingMilestone] = React.useState(false);
+  const [milestoneInput, setMilestoneInput] = React.useState(String(milestoneTarget));
+  const [isSavingMilestone, setIsSavingMilestone] = React.useState(false);
+  const [milestoneError, setMilestoneError] = React.useState("");
+
+  const startEditingMilestone = () => {
+    setMilestoneInput(String(milestoneTarget));
+    setMilestoneError("");
+    setIsEditingMilestone(true);
+  };
+
+  const cancelEditingMilestone = () => {
+    setIsEditingMilestone(false);
+    setMilestoneError("");
+  };
+
+  const saveMilestone = async () => {
+    const parsed = parseFloat(milestoneInput);
+    if (isNaN(parsed) || parsed <= 0) {
+      setMilestoneError("Enter an amount greater than 0.");
+      return;
+    }
+    setIsSavingMilestone(true);
+    setMilestoneError("");
+    try {
+      await onUpdateMilestone(parsed);
+      setIsEditingMilestone(false);
+    } catch (err) {
+      setMilestoneError("Couldn't save. Try again.");
+    } finally {
+      setIsSavingMilestone(false);
+    }
+  };
 
   const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const savedThisWeek = recentTransactions
@@ -86,6 +129,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
         <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
           <div className="md:col-span-2 space-y-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gold-500/10 text-gold-500 text-xs font-semibold border border-gold-500/20 font-mono tracking-wider uppercase">
+              <Sparkles className="w-3.5 h-3.5 text-gold-500 animate-pulse" /> National Hackathon Preview
+            </div>
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-100">
               Welcome back to Gullak Circle!
             </h2>
@@ -149,15 +195,73 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <span className="text-xs font-mono text-slate-400 uppercase tracking-widest font-semibold">
               Next Circle Milestone
             </span>
-            <div className="p-2.5 bg-gold-500/10 text-gold-500 rounded-xl border border-gold-500/10">
-              <PiggyBank className="w-4.5 h-4.5" />
+            <div className="flex items-center gap-2">
+              {!isEditingMilestone && (
+                <button
+                  type="button"
+                  onClick={startEditingMilestone}
+                  aria-label="Edit milestone target"
+                  className="p-1.5 text-slate-500 hover:text-gold-500 rounded-lg hover:bg-gold-500/10 transition-colors cursor-pointer"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+              )}
+              <div className="p-2.5 bg-gold-500/10 text-gold-500 rounded-xl border border-gold-500/10">
+                <PiggyBank className="w-4.5 h-4.5" />
+              </div>
             </div>
           </div>
-          
-          <div className="flex items-baseline gap-2 mb-2">
-            <p className="text-3xl font-bold tracking-tight text-slate-100">₹{nextMilestone.toLocaleString("en-IN")}</p>
-            <span className="text-xs text-slate-500 font-mono">Target</span>
-          </div>
+
+          {isEditingMilestone ? (
+            <div className="mb-2 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xl font-bold text-slate-500">₹</span>
+                <input
+                  type="number"
+                  autoFocus
+                  value={milestoneInput}
+                  onChange={(e) => setMilestoneInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveMilestone();
+                    if (e.key === "Escape") cancelEditingMilestone();
+                  }}
+                  disabled={isSavingMilestone}
+                  className="w-full px-2 py-1 rounded-lg bg-matte-black border border-gold-500/20 focus:outline-none focus:ring-1 focus:ring-gold-500 text-2xl font-bold text-slate-100 font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={saveMilestone}
+                  disabled={isSavingMilestone}
+                  aria-label="Save milestone"
+                  className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingMilestone ? (
+                    <div className="w-3.5 h-3.5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Check className="w-4 h-4" />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelEditingMilestone}
+                  disabled={isSavingMilestone}
+                  aria-label="Cancel editing milestone"
+                  className="p-1.5 text-slate-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              {milestoneError && <p className="text-[11px] text-red-400">{milestoneError}</p>}
+            </div>
+          ) : (
+            <div className="flex items-baseline gap-2 mb-2">
+              <p className="text-3xl font-bold tracking-tight text-slate-100">₹{milestoneTarget.toLocaleString("en-IN")}</p>
+              <span className="text-xs text-slate-500 font-mono">Target</span>
+            </div>
+          )}
+          {milestoneUpdateError && !isEditingMilestone && (
+            <p className="text-[11px] text-red-400 mb-2">{milestoneUpdateError}</p>
+          )}
 
           <div className="space-y-1.5">
             <div className="flex justify-between text-xs text-slate-500 font-mono">

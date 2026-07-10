@@ -20,6 +20,7 @@ interface RoundupSimulatorPageProps {
   recentTransactions: Transaction[];
   onSimulateRoundup: (merchant: string, amount: number, roundup: number) => void;
   triggerConfetti: () => void;
+  milestoneTarget?: number;
 }
 
 const PRESET_MERCHANTS = [
@@ -34,7 +35,8 @@ export const RoundupSimulatorPage: React.FC<RoundupSimulatorPageProps> = ({
   poolBalance,
   recentTransactions,
   onSimulateRoundup,
-  triggerConfetti
+  triggerConfetti,
+  milestoneTarget = 30000
 }) => {
   const [customMerchant, setCustomMerchant] = useState("");
   const [customAmount, setCustomAmount] = useState("");
@@ -245,7 +247,7 @@ export const RoundupSimulatorPage: React.FC<RoundupSimulatorPageProps> = ({
             </h4>
 
             <div className="mt-4 inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-gold-500/10 border border-gold-500/20 text-gold-500 text-xs font-mono tracking-wider uppercase rounded-full">
-              <Sparkles className="w-3.5 h-3.5 text-gold-500" /> Milestone target is ₹30,000
+              <Sparkles className="w-3.5 h-3.5 text-gold-500" /> Milestone target is ₹{milestoneTarget.toLocaleString("en-IN")}
             </div>
           </div>
 
@@ -274,16 +276,20 @@ export const RoundupSimulatorPage: React.FC<RoundupSimulatorPageProps> = ({
           <div className="p-6 rounded-3xl bg-matte-charcoal border border-gold-500/10 shadow-sm space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-widest font-mono text-slate-400">Live Pool Feed</h3>
             
-            <div className="space-y-3">
-              {recentTransactions.map((tx) => (
-                <div key={tx.id} className="flex justify-between items-center text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-gold-500" />
-                    <span className="font-medium text-slate-300">{tx.merchant}</span>
+            <div className="space-y-3 max-h-72 overflow-y-auto pr-1 scrollbar-thin">
+              {recentTransactions.length === 0 ? (
+                <p className="text-xs text-slate-500 text-center py-4">No roundups yet — simulate one to see it here.</p>
+              ) : (
+                recentTransactions.map((tx) => (
+                  <div key={tx.id} className="flex justify-between items-center text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-gold-500" />
+                      <span className="font-medium text-slate-300">{tx.merchant}</span>
+                    </div>
+                    <span className="font-mono text-gold-500 font-bold">+₹{tx.roundup.toFixed(2)}</span>
                   </div>
-                  <span className="font-mono text-gold-500 font-bold">+₹{tx.roundup.toFixed(2)}</span>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 

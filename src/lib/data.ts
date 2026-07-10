@@ -17,6 +17,16 @@ function colorForId(id: string) {
   return MEMBER_COLORS[hash % MEMBER_COLORS.length];
 }
 
+// Members with a higher Contribution Score are more trusted by the circle,
+// so their claims need fewer YES votes to clear. Tiered instead of linear so
+// it's easy to reason about and tune.
+export function getVotesRequired(contributionScore: number): number {
+  if (contributionScore >= 90) return 2;
+  if (contributionScore >= 70) return 3;
+  if (contributionScore >= 40) return 4;
+  return 5;
+}
+
 function timeAgo(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diffMs / 60000);
@@ -143,6 +153,17 @@ export async function fetchCircle(circleId: string) {
   return data;
 }
 
+// Updates the circle's savings goal shown as "Next Circle Milestone" on the
+// Dashboard. Requires a `milestone_target` numeric column on `circles`
+// (see project setup notes) — falls back to 30000 client-side if absent.
+export async function updateMilestone(circleId: string, milestoneTarget: number): Promise<void> {
+  const { error } = await supabase
+    .from("circles")
+    .update({ milestone_target: milestoneTarget })
+    .eq("id", circleId);
+  if (error) throw error;
+}
+
 export async function fetchMembers(circleId: string): Promise<Member[]> {
   const { data, error } = await supabase
     .from("circle_members")
@@ -211,25 +232,88 @@ export async function fetchClaims(circleId: string): Promise<Claim[]> {
     }
   }
 
-  return (data ?? []).map((c: any) => ({
-    id: c.id,
-    claimantId: c.claimant_id,
-    claimantName: c.claimant?.name || "Unknown Member",
-    claimantAvatar: c.claimant?.avatar_url || "",
-    reason: c.reason,
-    amount: Number(c.amount),
-    description: c.description || "",
-    date: new Date(c.created_at).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" }),
-    status: c.status || "Pending",
-    aiRiskLabel: c.ai_risk_label || "Needs Review",
-    aiRiskConfidence: c.ai_risk_confidence ?? 0,
-    aiRiskReason: c.ai_risk_reason || "",
-    votesYes: c.votes_yes ?? 0,
-    votesNo: c.votes_no ?? 0,
-    votedMembers: votesByClaimId[c.id] || {},
-    receiptUrl: c.receipt_url,
-    payoutStatus: c.payout_status || "Awaiting Vote",
-  }));
+  return (data ?? []).map((c: any) => {
+    const claimantScore = c.claimant?.score ?? 0;
+    return {
+      id: c.id,
+      claimantId: c.claimant_id,
+      claimantName: c.claimant?.name || "Unknown Member",
+      claimantAvatar: c.claimant?.avatar_url || "",
+      claimantScore,
+      votesRequired: getVotesRequired(claimantScore),
+      reason: c.reason,
+      amount: Number(c.amount),
+      description: c.description || "",
+      date: new Date(c.created_at).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" }),
+      status: c.status || "Pending",
+      aiRiskLabel: c.ai_risk_label || "Needs Review",
+      aiRiskConfidence: c.ai_risk_confidence ?? 0,
+      aiRiskReason: c.ai_risk_reason || "",
+      votesYes: c.votes_yes ?? 0,
+      votesNo: c.votes_no ?? 0,
+      votedMembers: votesByClaimId[c.id] || {},
+      receiptUrl: c.receipt_url,
+      payoutStatus: c.payout_status || "Awaiting Vote",
+    } as Claim;
+  });
+}
+
+// Inserts a new claim, then kicks off the async Claude-powered fraud check
+// (supabase/functions/fraud-check) which writes ai_risk_* fields back onto
+// the row once it completes. Voting opens immediately, but this lets the
+// AI Guard badge populate a few seconds later without blocking submission.
+export async function submitClaimWithAiCheck(params: {
+  circleId: string;
+  claimantId: string;
+  claimantScore: number;
+  reason: string;
+  amount: number;
+  description: string;
+  receiptUrl: string;
+}): Promise<void> {
+  const { circleId, claimantId, claimantScore, reason, amount, description, receiptUrl } = params;
+
+  const { data: inserted, error: insertError } = await supabase
+    .from("claims")
+    .insert({
+      circle_id: circleId,
+      claimant_id: claimantId,
+      reason,
+      amount,
+      description,
+      receipt_url: receiptUrl,
+      status: "Pending",
+      payout_status: "Awaiting Vote",
+      votes_yes: 0,
+      votes_no: 0,
+    })
+    .select()
+    .single();
+  if (insertError) throw insertError;
+
+  const { count: previousClaims } = await supabase
+    .from("claims")
+    .select("id", { count: "exact", head: true })
+    .eq("claimant_id", claimantId)
+    .eq("circle_id", circleId)
+    .neq("id", inserted.id);
+
+  // Fire-and-forget: don't let a slow/unavailable AI function block the
+  // submission flow. Errors are logged but not surfaced to the claimant.
+  supabase.functions
+    .invoke("fraud-check", {
+      body: {
+        claim: {
+          id: inserted.id,
+          reason,
+          amount,
+          description,
+          contributor_score: claimantScore,
+          previous_claims: previousClaims ?? 0,
+        },
+      },
+    })
+    .catch((err) => console.error("Fraud check failed", err));
 }
 
 export function computePoolStats(
