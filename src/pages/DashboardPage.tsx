@@ -1,12 +1,11 @@
 import React from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { 
   Coins, 
   Users, 
   ShieldAlert, 
   ArrowUpRight, 
   Activity, 
-  Sparkles, 
   PlusCircle, 
   ChevronRight, 
   CheckCircle,
@@ -16,8 +15,7 @@ import {
   AlertCircle,
   Pencil,
   Check,
-  X,
-  Award
+  X
 } from "lucide-react";
 import { Member, Transaction, Claim, PoolStats } from "../types";
 
@@ -28,7 +26,6 @@ interface DashboardPageProps {
   pendingClaims: Claim[];
   poolStats: PoolStats;
   onNavigate: (page: string) => void;
-  isDarkMode: boolean;
   milestoneTarget: number;
   onUpdateMilestone: (newTarget: number) => Promise<void> | void;
   milestoneUpdateError?: string;
@@ -41,7 +38,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   pendingClaims,
   poolStats,
   onNavigate,
-  isDarkMode,
   milestoneTarget,
   onUpdateMilestone,
   milestoneUpdateError = ""
@@ -50,7 +46,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   const milestoneProgress = Math.min((poolBalance / milestoneTarget) * 100, 100);
 
   const [isEditingMilestone, setIsEditingMilestone] = React.useState(false);
-  const [showMembersModal, setShowMembersModal] = React.useState(false);
   const [milestoneInput, setMilestoneInput] = React.useState(String(milestoneTarget));
   const [isSavingMilestone, setIsSavingMilestone] = React.useState(false);
   const [milestoneError, setMilestoneError] = React.useState("");
@@ -131,9 +126,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
         <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
           <div className="md:col-span-2 space-y-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gold-500/10 text-gold-500 text-xs font-semibold border border-gold-500/20 font-mono tracking-wider uppercase">
-              <Sparkles className="w-3.5 h-3.5 text-gold-500 animate-pulse" /> National Hackathon Preview
-            </div>
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-100">
               Welcome back to Gullak Circle!
             </h2>
@@ -286,11 +278,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          onClick={() => setShowMembersModal(true)}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => { if (e.key === "Enter") setShowMembersModal(true); }}
-          className="p-6 rounded-3xl bg-matte-charcoal border border-gold-500/10 shadow-lg shadow-black/30 relative overflow-hidden cursor-pointer hover:border-gold-500/30 transition-colors"
+          className="p-6 rounded-3xl bg-matte-charcoal border border-gold-500/10 shadow-lg shadow-black/30 relative overflow-hidden"
         >
           <div className="absolute top-0 right-0 w-24 h-24 bg-gold-500/5 rounded-full blur-xl" />
           <div className="flex items-center justify-between mb-4">
@@ -328,7 +316,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <span className="text-xs text-slate-500">Average Trust Score:</span>
             <span className="text-xs font-mono font-bold text-gold-500">{avgTrustScore.toFixed(1)}/100</span>
           </div>
-          <p className="text-[10px] text-slate-600 mt-2 font-mono">Click to view all member profiles →</p>
         </motion.div>
 
       </div>
@@ -547,83 +534,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         </div>
 
       </div>
-
-      {/* Circle Trust Members Modal */}
-      <AnimatePresence>
-        {showMembersModal && (
-          <motion.div
-            key="members-modal-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setShowMembersModal(false)}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
-          >
-            <motion.div
-              key="members-modal-panel"
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md max-h-[80vh] flex flex-col rounded-3xl bg-matte-charcoal border border-gold-500/15 shadow-2xl overflow-hidden"
-            >
-              <div className="p-5 flex items-center justify-between border-b border-gold-500/10 flex-shrink-0">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-100">Circle Trust Members</h3>
-                  <p className="text-[11px] text-slate-500 mt-0.5">{members.length} verified friends in your circle</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowMembersModal(false)}
-                  aria-label="Close"
-                  className="p-1.5 text-slate-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="p-3 space-y-1.5 overflow-y-auto">
-                {members.map((m) => (
-                  <div
-                    key={m.id}
-                    className="flex items-center gap-3 p-3 rounded-2xl hover:bg-gold-500/5 transition-colors"
-                  >
-                    <img
-                      src={m.avatar}
-                      alt={m.name}
-                      referrerPolicy="no-referrer"
-                      className="w-11 h-11 rounded-full object-cover border border-gold-500/15 flex-shrink-0"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-slate-200 truncate">{m.name}</p>
-                      <p className="text-[11px] text-slate-500 truncate">{m.role}</p>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <div className="flex items-center gap-1 justify-end">
-                        <Award className={`w-3 h-3 ${
-                          m.score >= 90 ? "text-gold-500" :
-                          m.score >= 70 ? "text-slate-300" :
-                          m.score >= 40 ? "text-amber-500" : "text-red-500"
-                        }`} />
-                        <span className={`text-sm font-bold font-mono ${
-                          m.score >= 90 ? "text-gold-500" :
-                          m.score >= 70 ? "text-slate-300" :
-                          m.score >= 40 ? "text-amber-500" : "text-red-500"
-                        }`}>
-                          {m.score}
-                        </span>
-                        <span className="text-[10px] text-slate-500">/100</span>
-                      </div>
-                      <p className="text-[9px] text-slate-500 uppercase tracking-wider font-mono">Trust Score</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
     </div>
   );
 };
