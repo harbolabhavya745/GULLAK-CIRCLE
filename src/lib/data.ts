@@ -164,6 +164,28 @@ export async function updateMilestone(circleId: string, milestoneTarget: number)
   if (error) throw error;
 }
 
+// Turns raw contribution amounts into a 0-100 score that moves live as
+// members contribute. Weighted blend of:
+//  - relative share vs. the circle's top contributor (rewards being ahead)
+//  - relative share vs. the circle average (rewards being above the pack)
+// A 15-point floor keeps brand-new members from showing 0 and looking "bad".
+export function computeContributionScore(
+  totalContributed: number,
+  allContributions: number[]
+): number {
+  const contributions = allContributions.length > 0 ? allContributions : [totalContributed];
+  const max = Math.max(...contributions, 0);
+  const avg = contributions.reduce((sum, v) => sum + v, 0) / contributions.length;
+
+  if (max <= 0) return 50; // nobody has contributed anything yet
+
+  const vsTop = (totalContributed / max) * 100;
+  const vsAvg = avg > 0 ? Math.min(150, (totalContributed / avg) * 100) : 100;
+
+  const blended = vsTop * 0.6 + vsAvg * 0.4;
+  return Math.round(Math.min(100, Math.max(15, blended)));
+}
+
 export async function fetchMembers(circleId: string): Promise<Member[]> {
   const { data, error } = await supabase
     .from("circle_members")
@@ -171,21 +193,23 @@ export async function fetchMembers(circleId: string): Promise<Member[]> {
     .eq("circle_id", circleId);
   if (error) throw error;
 
-  return (data ?? [])
-    .filter((row: any) => row.profiles)
-    .map((row: any) => {
-      const p = row.profiles;
-      return {
-        id: p.id,
-        name: p.name,
-        avatar: p.avatar_url,
-        role: p.role || "Member",
-        totalContributed: Number(p.total_contributed ?? 0),
-        score: p.score ?? 0,
-        badge: p.badge || "New Member",
-        color: colorForId(p.id),
-      } as Member;
-    });
+  const rows = (data ?? []).filter((row: any) => row.profiles);
+  const allContributions = rows.map((row: any) => Number(row.profiles.total_contributed ?? 0));
+
+  return rows.map((row: any) => {
+    const p = row.profiles;
+    const totalContributed = Number(p.total_contributed ?? 0);
+    return {
+      id: p.id,
+      name: p.name,
+      avatar: p.avatar_url,
+      role: p.role || "Member",
+      totalContributed,
+      score: computeContributionScore(totalContributed, allContributions),
+      badge: p.badge || "New Member",
+      color: colorForId(p.id),
+    } as Member;
+  });
 }
 
 export async function fetchTransactions(circleId: string): Promise<Transaction[]> {
