@@ -39,11 +39,12 @@ export const ClaimsFeedPage: React.FC<ClaimsFeedPageProps> = ({
   const [activeTab, setActiveTab] = useState<"Pending" | "Approved" | "Rejected">("Pending");
   const [payoutModalClaim, setPayoutModalClaim] = useState<Claim | null>(null);
   const [payoutAnimationStep, setPayoutAnimationStep] = useState<"processing" | "success">("processing");
+  const [votingState, setVotingState] = useState<{ claimId: string; choice: "yes" | "no" } | null>(null);
 
   // Filter claims based on selected tab
   const filteredClaims = claims.filter((c) => c.status === activeTab);
 
-  const handleVote = (claimId: string, choice: "yes" | "no") => {
+  const handleVote = async (claimId: string, choice: "yes" | "no") => {
     // Find the claim to check if the new vote triggers approval threshold (> 50%)
     const currentClaim = claims.find(c => c.id === claimId);
     if (!currentClaim) return;
@@ -51,32 +52,40 @@ export const ClaimsFeedPage: React.FC<ClaimsFeedPageProps> = ({
     // Block claimants from voting on their own claim
     if (currentUserId && currentClaim.claimantId === currentUserId) return;
 
-    onVoteClaim(claimId, choice);
+    // Guard against double-submits while a vote is already in flight
+    if (votingState) return;
+    setVotingState({ claimId, choice });
 
-    // Simulate standard quorum where total active voters (excluding claimant) is around 5.
-    // If YES votes becomes >= 3, let's trigger the Payout modal flow!
-    const newYesCount = currentClaim.votesYes + (choice === "yes" ? 1 : 0);
-    
-    if (choice === "yes" && newYesCount >= 3) {
-      // Trigger the celebration confetti
-      triggerConfetti();
-      
-      // Open payout simulation receipt modal automatically to show off!
-      setTimeout(() => {
-        setPayoutModalClaim({
-          ...currentClaim,
-          votesYes: newYesCount,
-          status: "Approved"
-        });
-        setPayoutAnimationStep("processing");
+    try {
+      await onVoteClaim(claimId, choice);
 
-        // Transition payout animation after 2.5 seconds
+      // Simulate standard quorum where total active voters (excluding claimant) is around 5.
+      // If YES votes becomes >= 3, let's trigger the Payout modal flow!
+      const newYesCount = currentClaim.votesYes + (choice === "yes" ? 1 : 0);
+
+      if (choice === "yes" && newYesCount >= 3) {
+        // Trigger the celebration confetti
+        triggerConfetti();
+
+        // Open payout simulation receipt modal automatically to show off!
         setTimeout(() => {
-          setPayoutAnimationStep("success");
-          onExecutePayout(claimId); // update pool balance and status
-          triggerConfetti();
-        }, 2200);
-      }, 800);
+          setPayoutModalClaim({
+            ...currentClaim,
+            votesYes: newYesCount,
+            status: "Approved"
+          });
+          setPayoutAnimationStep("processing");
+
+          // Transition payout animation after 2.5 seconds
+          setTimeout(() => {
+            setPayoutAnimationStep("success");
+            onExecutePayout(claimId); // update pool balance and status
+            triggerConfetti();
+          }, 2200);
+        }, 800);
+      }
+    } finally {
+      setVotingState(null);
     }
   };
 
@@ -236,18 +245,36 @@ export const ClaimsFeedPage: React.FC<ClaimsFeedPageProps> = ({
                     {!isClaimant && (
                       <div className="flex gap-2">
                         <button
-                          disabled={userHasVoted}
+                          disabled={userHasVoted || votingState !== null}
                           onClick={() => handleVote(claim.id, "no")}
                           className="px-4 py-2 bg-red-500/5 hover:bg-red-500/10 border border-red-500/15 text-red-500 text-xs font-bold rounded-xl flex items-center gap-1.5 disabled:opacity-40 transition-all cursor-pointer"
                         >
-                          <ThumbsDown className="w-3.5 h-3.5" /> No ({claim.votesNo})
+                          {votingState?.claimId === claim.id && votingState.choice === "no" ? (
+                            <>
+                              <div className="w-3.5 h-3.5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                              Voting...
+                            </>
+                          ) : (
+                            <>
+                              <ThumbsDown className="w-3.5 h-3.5" /> No ({claim.votesNo})
+                            </>
+                          )}
                         </button>
                         <button
-                          disabled={userHasVoted}
+                          disabled={userHasVoted || votingState !== null}
                           onClick={() => handleVote(claim.id, "yes")}
                           className="px-5 py-2.5 bg-gold-500 hover:bg-gold-400 text-matte-black text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-md shadow-gold-500/10 disabled:opacity-40 transition-all cursor-pointer"
                         >
-                          <ThumbsUp className="w-3.5 h-3.5" /> Yes ({claim.votesYes})
+                          {votingState?.claimId === claim.id && votingState.choice === "yes" ? (
+                            <>
+                              <div className="w-3.5 h-3.5 border-2 border-matte-black border-t-transparent rounded-full animate-spin" />
+                              Voting...
+                            </>
+                          ) : (
+                            <>
+                              <ThumbsUp className="w-3.5 h-3.5" /> Yes ({claim.votesYes})
+                            </>
+                          )}
                         </button>
                       </div>
                     )}

@@ -28,6 +28,7 @@ import { ProfilePage } from "./pages/ProfilePage";
 import { Sidebar } from "./components/Sidebar";
 import { Navbar } from "./components/Navbar";
 import { NotificationPanel } from "./components/NotificationPanel";
+import Loader from "./components/Loader";
 import { ConfettiEffect } from "./components/ConfettiEffect";
 
 export default function App() {
@@ -460,8 +461,8 @@ export default function App() {
 
   if (!authChecked) {
     return (
-      <div className="min-h-screen bg-matte-black flex items-center justify-center text-slate-400 font-mono text-sm">
-        Loading...
+      <div className="min-h-screen bg-matte-black flex items-center justify-center">
+        <Loader />
       </div>
     );
   }
@@ -476,8 +477,8 @@ export default function App() {
 
   if (!circleChecked) {
     return (
-      <div className="min-h-screen bg-matte-black flex items-center justify-center text-slate-400 font-mono text-sm">
-        Loading your circle...
+      <div className="min-h-screen bg-matte-black flex items-center justify-center">
+        <Loader label="Loading your circle" />
       </div>
     );
   }
