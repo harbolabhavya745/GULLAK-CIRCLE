@@ -179,6 +179,17 @@ export default function App() {
       .from("circles")
       .update({ pool_balance: poolBalance + roundup })
       .eq("id", activeCircleId);
+
+    // Keep this member's total_contributed in sync — the leaderboard score is
+    // derived from this column, so without it every member stays frozen at
+    // whatever score they were seeded with.
+    const newTotalContributed = Number(currentProfile?.total_contributed ?? 0) + roundup;
+    await supabase
+      .from("profiles")
+      .update({ total_contributed: newTotalContributed })
+      .eq("id", currentUser.id);
+    setCurrentProfile((prev: any) => (prev ? { ...prev, total_contributed: newTotalContributed } : prev));
+
     setPoolBalance((prev) => prev + roundup);
     await loadCircleData();
   };
@@ -383,6 +394,7 @@ export default function App() {
             recentTransactions={transactions}
             claims={claims}
             circleCreatedAt={circleCreatedAt}
+            currentUserId={currentUser?.id}
           />
         );
       case "simulator":

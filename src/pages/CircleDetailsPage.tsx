@@ -16,6 +16,7 @@ import {
   KeyRound
 } from "lucide-react";
 import { Member, Transaction, Claim } from "../types";
+import { LeaderboardPage } from "./LeaderboardPage";
 
 interface CircleDetailsPageProps {
   poolBalance: number;
@@ -24,6 +25,7 @@ interface CircleDetailsPageProps {
   claims?: Claim[];
   circleCreatedAt?: string;
   inviteCode?: string;
+  currentUserId?: string;
 }
 
 export const CircleDetailsPage: React.FC<CircleDetailsPageProps> = ({
@@ -32,7 +34,8 @@ export const CircleDetailsPage: React.FC<CircleDetailsPageProps> = ({
   recentTransactions,
   claims = [],
   circleCreatedAt,
-  inviteCode
+  inviteCode,
+  currentUserId
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -186,101 +189,9 @@ export const CircleDetailsPage: React.FC<CircleDetailsPageProps> = ({
 
         </div>
 
-        {/* Right 2 Columns: Members Grid & Contribution Leaderboard */}
-        <div className="lg:col-span-2 space-y-6">
-          
-          {/* Members Grid with Contribution Score circular indicator */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-slate-100">Active Circle Members</h3>
-              <span className="text-xs text-slate-500 font-mono">Sorted by Name</span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {members.map((member) => {
-                // Circular progress calculations (using luxury gold for fill)
-                const strokeColor = "#D4AF37";
-                
-                // SVG circle math
-                const radius = 22;
-                const circumference = 2 * Math.PI * radius;
-                const strokeDashoffset = circumference - (member.score / 100) * circumference;
-
-                return (
-                  <motion.div
-                    key={member.id}
-                    whileHover={{ scale: 1.01 }}
-                    className="p-5 rounded-3xl bg-matte-charcoal border border-gold-500/10 shadow-sm flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-3">
-                      {/* Avatar with Role */}
-                      <div className="relative">
-                        <img
-                          src={member.avatar}
-                          alt={member.name}
-                          referrerPolicy="no-referrer"
-                          className="w-12 h-12 rounded-2xl object-cover border border-gold-500/10"
-                        />
-                        <span className="absolute -bottom-1 -right-1 px-1.5 py-0.5 text-[8px] bg-gold-500 text-matte-black font-mono rounded font-bold uppercase">
-                          {member.role.split(" ")[0]}
-                        </span>
-                      </div>
-
-                      <div className="space-y-1">
-                        <h4 className="text-sm font-bold text-slate-200">{member.name}</h4>
-                        <div className="flex flex-wrap gap-1.5 items-center">
-                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gold-500/10 text-gold-500 border border-gold-500/20">
-                            {member.badge}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Circular Score Indicator & Amount */}
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <p className="text-[10px] text-slate-500 font-mono uppercase">CONTRIBUTION</p>
-                        <p className="text-sm font-bold text-gold-500 font-mono">₹{member.totalContributed}</p>
-                      </div>
-
-                      <div className="relative w-14 h-14 flex items-center justify-center">
-                        {/* Circular progress SVG */}
-                        <svg className="w-full h-full rotate-[-90deg]">
-                          <circle
-                            cx="28"
-                            cy="28"
-                            r={radius}
-                            className="stroke-matte-black"
-                            strokeWidth="3.5"
-                            fill="transparent"
-                          />
-                          <motion.circle
-                            cx="28"
-                            cy="28"
-                            r={radius}
-                            stroke={strokeColor}
-                            strokeWidth="3.5"
-                            fill="transparent"
-                            strokeDasharray={circumference}
-                            initial={{ strokeDashoffset: circumference }}
-                            animate={{ strokeDashoffset }}
-                            transition={{ duration: 1, ease: "easeOut" }}
-                            strokeLinecap="round"
-                          />
-                        </svg>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                          <span className="text-[11px] font-bold tracking-tighter text-gold-500">{member.score}</span>
-                          <span className="text-[8px] text-slate-500 font-mono leading-none">SCORE</span>
-                        </div>
-                      </div>
-                    </div>
-
-                  </motion.div>
-                );
-              })}
-            </div>
-          </div>
-
+        {/* Right 2 Columns: Interactive Leaderboard */}
+        <div className="lg:col-span-2">
+          <LeaderboardPage members={members} currentUserId={currentUserId} />
         </div>
 
       </div>
