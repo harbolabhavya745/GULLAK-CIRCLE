@@ -29,7 +29,6 @@ import { ProfilePage } from "./pages/ProfilePage";
 import { Sidebar } from "./components/Sidebar";
 import { Navbar } from "./components/Navbar";
 import { NotificationPanel } from "./components/NotificationPanel";
-import Loader from "./components/Loader";
 import { ConfettiEffect } from "./components/ConfettiEffect";
 
 // Pool of fake merchants/amount ranges the invisible auto-roundup engine
@@ -51,6 +50,7 @@ const AUTO_MERCHANTS: { name: string; min: number; max: number }[] = [
 
 export default function App() {
   const [activePage, setActivePage] = useState<string>("landing");
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
   const [notificationPanelOpen, setNotificationPanelOpen] = useState<boolean>(false);
   const [confettiTrigger, setConfettiTrigger] = useState<boolean>(false);
@@ -69,7 +69,6 @@ export default function App() {
   const [authChecked, setAuthChecked] = useState(false);
   const [circleChecked, setCircleChecked] = useState(false);
 
-<<<<<<< HEAD
   // Invisible auto-roundup engine — fires realistic-looking transactions on
   // its own so the pool grows without anyone clicking "Simulate". See
   // AUTO_MERCHANTS below for the pool of fake merchant/amount pairs.
@@ -86,8 +85,6 @@ export default function App() {
     }
   }, [isDarkMode]);
 
-=======
->>>>>>> 5e6f40ca27e7e5b7661bde72707a1373b1aa6a50
   // Get logged in user + make sure a profile row exists for them
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -493,6 +490,7 @@ export default function App() {
             pendingClaims={pendingClaimsList}
             poolStats={poolStats}
             onNavigate={setActivePage}
+            isDarkMode={isDarkMode}
             milestoneTarget={milestoneTarget}
             onUpdateMilestone={handleUpdateMilestone}
             milestoneUpdateError={milestoneUpdateError}
@@ -524,6 +522,7 @@ export default function App() {
           <ClaimSubmissionPage
             onSubmitClaim={handleSubmitClaim}
             triggerConfetti={handleTriggerConfetti}
+            isDarkMode={isDarkMode}
           />
         );
       case "claims":
@@ -562,6 +561,7 @@ export default function App() {
             pendingClaims={pendingClaimsList}
             poolStats={poolStats}
             onNavigate={setActivePage}
+            isDarkMode={isDarkMode}
             milestoneTarget={milestoneTarget}
             onUpdateMilestone={handleUpdateMilestone}
             milestoneUpdateError={milestoneUpdateError}
@@ -572,8 +572,8 @@ export default function App() {
 
   if (!authChecked) {
     return (
-      <div className="min-h-screen bg-matte-black flex items-center justify-center">
-        <Loader />
+      <div className="min-h-screen bg-matte-black flex items-center justify-center text-slate-400 font-mono text-sm">
+        Loading...
       </div>
     );
   }
@@ -582,14 +582,16 @@ export default function App() {
     return (
       <LoginPage
         onLaunch={() => setActivePage("dashboard")}
+        isDarkMode={isDarkMode}
+        onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
       />
     );
   }
 
   if (!circleChecked) {
     return (
-      <div className="min-h-screen bg-matte-black flex items-center justify-center">
-        <Loader label="Loading your circle" />
+      <div className="min-h-screen bg-matte-black flex items-center justify-center text-slate-400 font-mono text-sm">
+        Loading your circle...
       </div>
     );
   }
@@ -599,13 +601,15 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen font-sans flex bg-matte-black text-slate-100">
+    <div className={`min-h-screen font-sans flex ${isDarkMode ? "bg-matte-black text-slate-100" : "bg-gold-50 text-slate-900"}`}>
       <ConfettiEffect trigger={confettiTrigger} />
       <Sidebar
         activePage={activePage}
         onNavigate={setActivePage}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        isDarkMode={isDarkMode}
+        onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
         notificationCount={unreadNotificationsCount}
         onOpenNotifications={() => setNotificationPanelOpen(true)}
       />
