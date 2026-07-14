@@ -1,0 +1,397 @@
+.loader-container{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+
+.wallet-loader{
+
+    --wallet-color:rgba(35,35,38,.88);
+    --wallet-dark:rgba(18,18,20,.96);
+
+    --bill-color:#D4AF37;
+    --bill-light:#F4C430;
+
+    --text:#F4C430;
+
+    position:relative;
+
+    width:120px;
+
+    height:90px;
+}
+
+/* Wallet Back */
+
+.wallet-back{
+
+    position:absolute;
+
+    left:6px;
+
+    bottom:12px;
+
+    width:108px;
+
+    height:48px;
+
+    border-radius:10px 10px 0 0;
+
+    background:rgba(22,22,26,.75);
+
+    backdrop-filter:blur(14px);
+
+    border:1px solid rgba(255,255,255,.08);
+
+    box-shadow:
+    inset 0 1px rgba(255,255,255,.05),
+    0 0 18px rgba(212,175,55,.08);
+
+    z-index:0;
+}
+
+/* Bills */
+
+.bill{
+
+    position:absolute;
+
+    left:50%;
+
+    top:-30px;
+
+    transform:translateX(-50%);
+
+    width:72px;
+
+    height:42px;
+
+    border-radius:4px;
+
+    background:
+    linear-gradient(
+        135deg,
+        #F7D86B,
+        #D4AF37,
+        #B8860B
+    );
+
+    border:1px solid #FFD95E;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    opacity:0;
+
+    box-shadow:
+    0 0 12px rgba(212,175,55,.25),
+    inset 0 1px rgba(255,255,255,.25);
+}
+
+.bill::before{
+
+    content:"₹";
+
+    width:22px;
+
+    height:22px;
+
+    border-radius:50%;
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    color:#FFF8D0;
+
+    font-weight:bold;
+
+    font-size:18px;
+
+    border:2px solid rgba(255,255,255,.4);
+
+    background:rgba(255,255,255,.12);
+
+    backdrop-filter:blur(6px);
+
+    z-index:2;
+}
+
+.bill::after{
+
+    content:"";
+
+    position:absolute;
+
+    inset:4px;
+
+    border:1px dashed rgba(255,255,255,.35);
+
+    border-radius:3px;
+}
+
+.bill-1{
+
+    animation:slide 4s infinite;
+
+}
+
+.bill-2{
+
+    animation:slide 4s infinite;
+
+    animation-delay:.8s;
+}
+
+.bill-3{
+
+    animation:slide 4s infinite;
+
+    animation-delay:1.6s;
+}
+
+/* Wallet */
+
+.wallet-front{
+
+    position:absolute;
+
+    left:0;
+
+    bottom:0;
+
+    width:120px;
+
+    height:56px;
+
+    border-radius:12px;
+
+    overflow:hidden;
+
+    background:
+    linear-gradient(
+    180deg,
+    rgba(42,42,45,.85),
+    rgba(18,18,20,.96));
+
+    backdrop-filter:blur(20px);
+
+    border:1px solid rgba(255,255,255,.08);
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    box-shadow:
+
+    0 12px 30px rgba(0,0,0,.55),
+
+    0 0 20px rgba(212,175,55,.08),
+
+    inset 0 1px rgba(255,255,255,.08);
+
+    animation:wallet 4s infinite;
+
+    z-index:10;
+}
+
+.wallet-front::before{
+
+    content:"";
+
+    position:absolute;
+
+    inset:7px;
+
+    border-radius:8px;
+
+    border:1px dashed rgba(212,175,55,.25);
+}
+
+.wallet-front::after{
+
+    content:"";
+
+    position:absolute;
+
+    inset:0;
+
+    background:
+    linear-gradient(
+    120deg,
+    transparent,
+    rgba(255,255,255,.08),
+    transparent);
+
+    animation:shine 3s linear infinite;
+}
+
+/* Text */
+
+.text{
+
+    font-family:'Oswald',sans-serif;
+
+    font-size:15px;
+
+    font-weight:600;
+
+    letter-spacing:1px;
+
+    color:#F4C430;
+
+    text-shadow:0 0 8px rgba(212,175,55,.45);
+}
+
+.dot{
+
+    animation:wave 1.5s infinite;
+
+    display:inline-block;
+}
+
+.dot:nth-child(1){
+
+    animation-delay:0s;
+}
+
+.dot:nth-child(2){
+
+    animation-delay:.15s;
+}
+
+.dot:nth-child(3){
+
+    animation-delay:.3s;
+}
+
+/* Animations */
+
+@keyframes slide{
+
+0%{
+
+top:-30px;
+
+opacity:0;
+
+transform:translateX(-50%) scale(.85);
+
+}
+
+10%{
+
+opacity:1;
+
+}
+
+25%{
+
+top:18px;
+
+transform:translateX(-50%) scale(1);
+
+}
+
+90%{
+
+opacity:1;
+
+top:18px;
+
+}
+
+100%{
+
+opacity:0;
+
+top:18px;
+
+}
+
+}
+
+@keyframes wallet{
+
+0%,100%{
+
+transform:scale(1);
+
+}
+
+12%{
+
+transform:scale(1.03,.97);
+
+}
+
+15%{
+
+transform:scale(1);
+
+}
+
+32%{
+
+transform:scale(1.03,.97);
+
+}
+
+35%{
+
+transform:scale(1);
+
+}
+
+52%{
+
+transform:scale(1.03,.97);
+
+}
+
+55%{
+
+transform:scale(1);
+
+}
+
+}
+
+@keyframes shine{
+
+from{
+
+transform:translateX(-150%);
+
+}
+
+to{
+
+transform:translateX(150%);
+
+}
+
+}
+
+@keyframes wave{
+
+0%,60%,100%{
+
+transform:translateY(0);
+
+}
+
+30%{
+
+transform:translateY(-5px);
+
+}
+
+}

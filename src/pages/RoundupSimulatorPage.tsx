@@ -42,8 +42,10 @@ export const RoundupSimulatorPage: React.FC<RoundupSimulatorPageProps> = ({
   const [customAmount, setCustomAmount] = useState("");
   const [activeSimulation, setActiveSimulation] = useState<any>(null);
   const [flyingCoins, setFlyingCoins] = useState<number[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleSimulate = (name: string, amtStr: string) => {
+    if (isProcessing) return;
     const amt = parseFloat(amtStr);
     if (isNaN(amt) || amt <= 0 || !name.trim()) return;
 
@@ -68,12 +70,17 @@ export const RoundupSimulatorPage: React.FC<RoundupSimulatorPageProps> = ({
     // Spawn flying coins animation
     const coinArray = Array.from({ length: 8 }).map((_, i) => i);
     setFlyingCoins(coinArray);
+    setIsProcessing(true);
 
     // Call parent handler to update pool balance and transactions lists
-    setTimeout(() => {
-      onSimulateRoundup(name, amt, roundup);
-      if (roundup >= 8) {
-        triggerConfetti();
+    setTimeout(async () => {
+      try {
+        await onSimulateRoundup(name, amt, roundup);
+        if (roundup >= 8) {
+          triggerConfetti();
+        }
+      } finally {
+        setIsProcessing(false);
       }
     }, 1200);
 
@@ -155,10 +162,12 @@ export const RoundupSimulatorPage: React.FC<RoundupSimulatorPageProps> = ({
                 return (
                   <motion.div
                     key={idx}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => handleSimulate(m.name, m.amount.toString())}
-                    className="p-4 rounded-2xl bg-matte-black hover:bg-gold-500/5 border border-gold-500/5 cursor-pointer flex items-center justify-between transition-all"
+                    whileHover={isProcessing ? undefined : { scale: 1.02 }}
+                    whileTap={isProcessing ? undefined : { scale: 0.98 }}
+                    onClick={() => !isProcessing && handleSimulate(m.name, m.amount.toString())}
+                    className={`p-4 rounded-2xl bg-matte-black border border-gold-500/5 flex items-center justify-between transition-all ${
+                      isProcessing ? "opacity-40 cursor-not-allowed" : "hover:bg-gold-500/5 cursor-pointer"
+                    }`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`p-2.5 rounded-xl ${m.color} border border-gold-500/10`}>
@@ -219,11 +228,20 @@ export const RoundupSimulatorPage: React.FC<RoundupSimulatorPageProps> = ({
 
             <div className="flex justify-end pt-2">
               <button
-                disabled={!customMerchant.trim() || !customAmount}
+                disabled={!customMerchant.trim() || !customAmount || isProcessing}
                 onClick={() => handleSimulate(customMerchant, customAmount)}
                 className="px-6 py-3.5 rounded-xl bg-gold-500 hover:bg-gold-400 text-matte-black font-bold text-xs uppercase tracking-wider shadow-lg shadow-gold-500/10 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <Plus className="w-4 h-4" /> Swipe & Roundup
+                {isProcessing ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-matte-black border-t-transparent rounded-full animate-spin" />
+                    Adding to pool...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" /> Swipe & Roundup
+                  </>
+                )}
               </button>
             </div>
           </div>

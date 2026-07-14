@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Member, Transaction, Claim } from "../types";
 import { LeaderboardPage } from "./LeaderboardPage";
+import { ContributionTrendChart } from "../components/ContributionTrendChart";
 
 interface CircleDetailsPageProps {
   poolBalance: number;
@@ -107,6 +108,9 @@ export const CircleDetailsPage: React.FC<CircleDetailsPageProps> = ({
           </div>
         </motion.div>
       )}
+
+      {/* Contribution Trends Chart */}
+      <ContributionTrendChart members={members} transactions={recentTransactions} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         

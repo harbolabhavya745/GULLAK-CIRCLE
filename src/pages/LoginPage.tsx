@@ -18,11 +18,9 @@ import {
 
 interface LoginPageProps {
   onLaunch: () => void;
-  isDarkMode: boolean;
-  onToggleDarkMode: () => void;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onLaunch, isDarkMode, onToggleDarkMode }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({ onLaunch }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -133,15 +131,6 @@ const handleOAuthLogin = async (provider: "google") => {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={onToggleDarkMode} 
-            className="p-2.5 rounded-xl bg-matte-charcoal border border-gold-500/10 text-slate-400 hover:text-gold-500 hover:border-gold-500/25 transition-all text-xs"
-            aria-label="Toggle Dark Mode"
-          >
-            {isDarkMode ? "☀️" : "🌙"}
-          </button>
-        </div>
       </header>
 
       {/* Main Content Form Section */}

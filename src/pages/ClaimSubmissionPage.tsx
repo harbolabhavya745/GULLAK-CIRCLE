@@ -18,13 +18,11 @@ import {
 interface ClaimSubmissionPageProps {
   onSubmitClaim: (reason: string, amount: number, description: string, file: File | null) => void;
   triggerConfetti: () => void;
-  isDarkMode: boolean;
 }
 
 export const ClaimSubmissionPage: React.FC<ClaimSubmissionPageProps> = ({
   onSubmitClaim,
-  triggerConfetti,
-  isDarkMode
+  triggerConfetti
 }) => {
   const [reason, setReason] = useState("");
   const [amount, setAmount] = useState("");
