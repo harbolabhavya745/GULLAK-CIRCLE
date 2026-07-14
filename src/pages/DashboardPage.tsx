@@ -435,44 +435,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         {/* Right 1 Column: Pending Claims & Quick Actions */}
         <div className="space-y-8">
           
-          {/* Quick Actions Panel */}
-          <div className="p-6 rounded-3xl bg-matte-charcoal border border-gold-500/10 shadow-lg shadow-black/30">
-            <h3 className="text-base font-bold text-slate-100 mb-4">Quick Circle Actions</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                onClick={() => onNavigate("submit-claim")}
-                className="p-4 rounded-2xl bg-gold-500/5 hover:bg-gold-500/10 border border-gold-500/15 text-gold-500 transition-all text-left space-y-2 group cursor-pointer"
-              >
-                <PlusCircle className="w-6 h-6 group-hover:scale-105 transition-transform text-gold-500" />
-                <p className="text-xs font-bold leading-tight uppercase tracking-wider font-sans">Submit Emergency Claim</p>
-              </button>
-
-              <button
-                onClick={() => onNavigate("claims")}
-                className="p-4 rounded-2xl bg-gold-500/5 hover:bg-gold-500/10 border border-gold-500/15 text-gold-500 transition-all text-left space-y-2 group cursor-pointer"
-              >
-                <CheckCircle className="w-6 h-6 group-hover:scale-105 transition-transform text-gold-500" />
-                <p className="text-xs font-bold leading-tight uppercase tracking-wider font-sans">Vote Pending Claims ({pendingClaims.length})</p>
-              </button>
-
-              <button
-                onClick={() => onNavigate("circle")}
-                className="p-4 rounded-2xl bg-gold-500/5 hover:bg-gold-500/10 border border-gold-500/15 text-gold-500 transition-all text-left space-y-2 group cursor-pointer"
-              >
-                <Users className="w-6 h-6 group-hover:scale-105 transition-transform text-gold-500" />
-                <p className="text-xs font-bold leading-tight uppercase tracking-wider font-sans">Circle Members Info</p>
-              </button>
-
-              <button
-                onClick={() => onNavigate("simulator")}
-                className="p-4 rounded-2xl bg-gold-500/5 hover:bg-gold-500/10 border border-gold-500/15 text-gold-500 transition-all text-left space-y-2 group cursor-pointer"
-              >
-                <Activity className="w-6 h-6 group-hover:scale-105 transition-transform text-gold-500" />
-                <p className="text-xs font-bold leading-tight uppercase tracking-wider font-sans">Roundup Simulator</p>
-              </button>
-            </div>
-          </div>
-
           {/* Active / Pending Claims Checklist */}
           <div className="p-6 rounded-3xl bg-matte-charcoal border border-gold-500/10 shadow-lg shadow-black/30">
             <div className="flex items-center justify-between mb-4">

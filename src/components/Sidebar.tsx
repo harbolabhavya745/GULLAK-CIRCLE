@@ -113,21 +113,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Footer controls inside sidebar */}
         <div className="p-6 border-t border-gold-500/10 space-y-4">
           
-          {/* Notifications Quick bar */}
-          <div className="flex items-center justify-between">
-            <button 
-              onClick={onOpenNotifications}
-              className="relative p-2.5 rounded-xl bg-matte-gray border border-gold-500/10 text-slate-400 hover:text-gold-500 hover:border-gold-500/30 transition-all"
-            >
-              <Bell className="w-4.5 h-4.5" />
-              {notificationCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-gold-500 text-matte-black text-[9px] font-bold flex items-center justify-center border-2 border-matte-charcoal">
-                  {notificationCount}
-                </span>
-              )}
-            </button>
-          </div>
-
           {/* Log out */}
           <button
             onClick={handleLogout}
