@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { supabase } from "./lib/supabase";
 import {
   ensureProfile,
   updateAvatar,
   submitClaimWithAiCheck,
+  uploadClaimReceipt,
   updateMilestone,
   fetchMyCircleId,
   createCircle,
@@ -30,6 +31,23 @@ import { Navbar } from "./components/Navbar";
 import { NotificationPanel } from "./components/NotificationPanel";
 import { ConfettiEffect } from "./components/ConfettiEffect";
 
+// Pool of fake merchants/amount ranges the invisible auto-roundup engine
+// picks from — kept outside the component so it's a stable reference.
+const AUTO_MERCHANTS: { name: string; min: number; max: number }[] = [
+  { name: "Swiggy", min: 120, max: 480 },
+  { name: "Zomato", min: 150, max: 550 },
+  { name: "Blinkit", min: 80, max: 650 },
+  { name: "Zepto", min: 60, max: 400 },
+  { name: "Uber", min: 90, max: 350 },
+  { name: "Ola", min: 70, max: 300 },
+  { name: "BigBasket", min: 300, max: 1400 },
+  { name: "Amazon", min: 200, max: 2200 },
+  { name: "Starbucks", min: 180, max: 520 },
+  { name: "Dominos", min: 250, max: 700 },
+  { name: "IRCTC", min: 350, max: 1600 },
+  { name: "Local Chai Stall", min: 10, max: 60 },
+];
+
 export default function App() {
   const [activePage, setActivePage] = useState<string>("landing");
   const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
@@ -50,6 +68,13 @@ export default function App() {
   const [activeCircleId, setActiveCircleId] = useState<string | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [circleChecked, setCircleChecked] = useState(false);
+
+  // Invisible auto-roundup engine — fires realistic-looking transactions on
+  // its own so the pool grows without anyone clicking "Simulate". See
+  // AUTO_MERCHANTS below for the pool of fake merchant/amount pairs.
+  const [autoEngineOn, setAutoEngineOn] = useState<boolean>(false);
+  const [lastAutoTx, setLastAutoTx] = useState<{ merchant: string; roundup: number; at: number } | null>(null);
+  const autoEngineTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Dark mode
   useEffect(() => {
@@ -189,24 +214,98 @@ export default function App() {
       .from("circles")
       .update({ pool_balance: poolBalance + roundup })
       .eq("id", activeCircleId);
-
-    // Keep this member's total_contributed in sync — the leaderboard score is
-    // derived from this column, so without it every member stays frozen at
-    // whatever score they were seeded with.
-    const newTotalContributed = Number(currentProfile?.total_contributed ?? 0) + roundup;
-    await supabase
-      .from("profiles")
-      .update({ total_contributed: newTotalContributed })
-      .eq("id", currentUser.id);
-    setCurrentProfile((prev: any) => (prev ? { ...prev, total_contributed: newTotalContributed } : prev));
-
     setPoolBalance((prev) => prev + roundup);
     await loadCircleData();
   };
 
+  // Always call the freshest handleSimulateRoundup from the auto-engine timer
+  // below — otherwise the timer's closure would keep using a stale
+  // poolBalance from whenever the interval was first set up.
+  const handleSimulateRoundupRef = useRef(handleSimulateRoundup);
+  useEffect(() => {
+    handleSimulateRoundupRef.current = handleSimulateRoundup;
+  });
+
+  // Invisible auto-roundup engine: while ON, silently "spends" at a random
+  // merchant every ~10-22s and rounds it up — no button, no dialog. This is
+  // what makes the pool balance/leaderboard look alive on their own for a
+  // demo, standing in for a real bank/UPI feed.
+  useEffect(() => {
+    if (!autoEngineOn || !currentUser || !activeCircleId) {
+      if (autoEngineTimeoutRef.current) clearTimeout(autoEngineTimeoutRef.current);
+      return;
+    }
+
+    let cancelled = false;
+
+    const scheduleNext = () => {
+      const delay = 10000 + Math.random() * 12000; // 10–22s between "purchases"
+      autoEngineTimeoutRef.current = setTimeout(async () => {
+        if (cancelled) return;
+        const pick = AUTO_MERCHANTS[Math.floor(Math.random() * AUTO_MERCHANTS.length)];
+        const amount = Math.round((pick.min + Math.random() * (pick.max - pick.min)) * 100) / 100;
+        const remainder = amount % 10;
+        const roundup = remainder === 0 ? 10 : Math.round((10 - remainder) * 100) / 100;
+
+        await handleSimulateRoundupRef.current(pick.name, amount, roundup);
+        if (!cancelled) {
+          setLastAutoTx({ merchant: pick.name, roundup, at: Date.now() });
+          scheduleNext();
+        }
+      }, delay);
+    };
+
+    scheduleNext();
+
+    return () => {
+      cancelled = true;
+      if (autoEngineTimeoutRef.current) clearTimeout(autoEngineTimeoutRef.current);
+    };
+  }, [autoEngineOn, currentUser, activeCircleId]);
+
+  // Secret toggle for the auto-roundup engine — no button, no icon, nothing
+  // on screen. Type "gullak" anywhere (as long as you're not typing into a
+  // text field) to flip it on/off. Confirmation only ever prints to the
+  // browser console, never to the UI, so it stays invisible on a projector.
+  useEffect(() => {
+    const secret = "gullak";
+    let buffer = "";
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isTyping =
+        !!target &&
+        (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
+      if (isTyping) {
+        buffer = "";
+        return;
+      }
+      buffer = (buffer + e.key.toLowerCase()).slice(-secret.length);
+      if (buffer === secret) {
+        buffer = "";
+        setAutoEngineOn((prev) => {
+          const next = !prev;
+          // eslint-disable-next-line no-console
+          console.log(`%c[gullak] auto-engine ${next ? "ON" : "OFF"}`, "color:#D4AF37; font-weight:bold;");
+          return next;
+        });
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   // 2. Submit claim
-  const handleSubmitClaim = async (reason: string, amount: number, description: string, filename: string) => {
+  const handleSubmitClaim = async (reason: string, amount: number, description: string, file: File | null) => {
     if (!currentUser || !activeCircleId || !currentProfile) return;
+
+    let receiptUrl = "";
+    if (file) {
+      try {
+        receiptUrl = await uploadClaimReceipt(currentUser.id, file);
+      } catch (err) {
+        console.error("Receipt upload failed, submitting claim without it:", err);
+      }
+    }
 
     await submitClaimWithAiCheck({
       circleId: activeCircleId,
@@ -215,7 +314,7 @@ export default function App() {
       reason,
       amount,
       description,
-      receiptUrl: filename,
+      receiptUrl,
     });
 
     const claimNotif: NotificationItem = {

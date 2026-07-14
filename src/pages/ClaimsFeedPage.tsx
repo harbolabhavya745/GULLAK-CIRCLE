@@ -13,7 +13,10 @@ import {
   Clock,
   ShieldCheck,
   ChevronRight,
-  Info
+  Info,
+  Paperclip,
+  X,
+  ExternalLink
 } from "lucide-react";
 import { Claim, Member } from "../types";
 
@@ -39,6 +42,13 @@ export const ClaimsFeedPage: React.FC<ClaimsFeedPageProps> = ({
   const [activeTab, setActiveTab] = useState<"Pending" | "Approved" | "Rejected">("Pending");
   const [payoutModalClaim, setPayoutModalClaim] = useState<Claim | null>(null);
   const [payoutAnimationStep, setPayoutAnimationStep] = useState<"processing" | "success">("processing");
+  const [previewReceipt, setPreviewReceipt] = useState<{ url: string; claimantName: string } | null>(null);
+  const [brokenImageUrls, setBrokenImageUrls] = useState<Set<string>>(new Set());
+
+  const isImageUrl = (url: string) => /\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(url);
+  const isRealUrl = (url: string) => /^(https?:|blob:)/i.test(url);
+  const markImageBroken = (url: string) =>
+    setBrokenImageUrls((prev) => (prev.has(url) ? prev : new Set(prev).add(url)));
 
   // Filter claims based on selected tab
   const filteredClaims = claims.filter((c) => c.status === activeTab);
@@ -173,6 +183,38 @@ export const ClaimsFeedPage: React.FC<ClaimsFeedPageProps> = ({
                   <h5 className="text-sm font-bold text-slate-100">{claim.reason}</h5>
                   <p className="text-xs text-slate-400 leading-relaxed">{claim.description}</p>
                 </div>
+
+                {/* Attached Receipt Preview */}
+                {claim.receiptUrl && isRealUrl(claim.receiptUrl) && (
+                  isImageUrl(claim.receiptUrl) && !brokenImageUrls.has(claim.receiptUrl) ? (
+                    <button
+                      type="button"
+                      onClick={() => setPreviewReceipt({ url: claim.receiptUrl!, claimantName: claim.claimantName })}
+                      className="flex items-center gap-3 p-2.5 rounded-xl bg-matte-black border border-gold-500/10 hover:border-gold-500/30 transition-all cursor-pointer text-left"
+                    >
+                      <img
+                        src={claim.receiptUrl}
+                        alt="Receipt"
+                        onError={() => markImageBroken(claim.receiptUrl!)}
+                        className="w-12 h-12 rounded-lg object-cover border border-gold-500/15 flex-shrink-0"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-400">Click to view full receipt</span>
+                    </button>
+                  ) : (
+                    <a
+                      href={claim.receiptUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-2 p-3 rounded-xl bg-matte-black border border-gold-500/10 hover:border-gold-500/30 transition-all cursor-pointer w-fit"
+                    >
+                      <Paperclip className="w-4 h-4 text-gold-500" />
+                      <span className="text-[11px] font-semibold text-slate-400">
+                        {brokenImageUrls.has(claim.receiptUrl) ? "Preview unavailable — open receipt" : "View attached receipt"}
+                      </span>
+                      <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                    </a>
+                  )
+                )}
 
                 {/* AI FRAUD RISK BADGE SCREEN */}
                 <div className="p-4 rounded-2xl bg-matte-black border border-gold-500/5 space-y-2">
@@ -379,6 +421,75 @@ export const ClaimsFeedPage: React.FC<ClaimsFeedPageProps> = ({
 
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* Receipt Lightbox */}
+      <AnimatePresence>
+        {previewReceipt && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setPreviewReceipt(null)}
+            className="fixed inset-0 bg-matte-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4 cursor-zoom-out"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="max-w-2xl w-full bg-matte-charcoal rounded-3xl border border-gold-500/15 shadow-2xl overflow-hidden cursor-default"
+            >
+              <div className="flex items-center justify-between p-4 border-b border-gold-500/10">
+                <span className="text-xs font-bold text-slate-300">
+                  Receipt from {previewReceipt.claimantName}
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <a
+                    href={previewReceipt.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="p-1.5 text-slate-500 hover:text-gold-500 transition-colors cursor-pointer"
+                    title="Open in new tab"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                  <button
+                    onClick={() => setPreviewReceipt(null)}
+                    className="p-1.5 text-slate-500 hover:text-red-500 transition-colors cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              {brokenImageUrls.has(previewReceipt.url) ? (
+                <div className="p-10 text-center space-y-3 bg-matte-black">
+                  <AlertCircle className="w-10 h-10 text-gold-500/60 mx-auto" />
+                  <p className="text-sm text-slate-300 font-semibold">Image couldn't load</p>
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+                    This usually means the Supabase "receipts" storage bucket isn't set to Public yet.
+                    Open it directly to check, or make the bucket public in Supabase → Storage.
+                  </p>
+                  <a
+                    href={previewReceipt.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-gold-500 hover:text-gold-400"
+                  >
+                    Open URL directly <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              ) : (
+                <img
+                  src={previewReceipt.url}
+                  alt="Full receipt"
+                  onError={() => markImageBroken(previewReceipt.url)}
+                  className="w-full max-h-[75vh] object-contain bg-matte-black"
+                />
+              )}
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 

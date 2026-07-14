@@ -194,11 +194,31 @@ export async function fetchMembers(circleId: string): Promise<Member[]> {
   if (error) throw error;
 
   const rows = (data ?? []).filter((row: any) => row.profiles);
-  const allContributions = rows.map((row: any) => Number(row.profiles.total_contributed ?? 0));
+
+  // Contribution totals are derived live from the transactions table rather
+  // than trusting a stored `total_contributed` column on profiles. Writing
+  // that column from the client requires RLS to trust a user's own claimed
+  // contribution (and, worse, needs write access to *other* members' rows
+  // whenever their score gets recalculated) — RLS correctly blocks that, so
+  // the column silently never updated. Summing straight from transactions
+  // needs no extra write permissions and can't be faked client-side.
+  const { data: txRows, error: txError } = await supabase
+    .from("transactions")
+    .select("user_id, roundup")
+    .eq("circle_id", circleId);
+  if (txError) throw txError;
+
+  const contributionByUser: Record<string, number> = {};
+  for (const t of txRows ?? []) {
+    if (!t.user_id) continue;
+    contributionByUser[t.user_id] = (contributionByUser[t.user_id] ?? 0) + Number(t.roundup ?? 0);
+  }
+
+  const allContributions = rows.map((row: any) => contributionByUser[row.profiles.id] ?? 0);
 
   return rows.map((row: any) => {
     const p = row.profiles;
-    const totalContributed = Number(p.total_contributed ?? 0);
+    const totalContributed = contributionByUser[p.id] ?? 0;
     return {
       id: p.id,
       name: p.name,
@@ -280,6 +300,25 @@ export async function fetchClaims(circleId: string): Promise<Claim[]> {
       payoutStatus: c.payout_status || "Awaiting Vote",
     } as Claim;
   });
+}
+
+// Uploads a claim's receipt/invoice image to Supabase Storage and returns its
+// public URL. Uses the "reciepts" bucket (matches the actual bucket name set
+// up in the Supabase dashboard — note the spelling).
+export async function uploadClaimReceipt(userId: string, file: File): Promise<string> {
+  const fileExt = file.name.split(".").pop() || "jpg";
+  const filePath = `${userId}/${Date.now()}.${fileExt}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("reciepts")
+    .upload(filePath, file, { upsert: true, cacheControl: "3600" });
+  if (uploadError) throw uploadError;
+
+  const { data: publicUrlData } = supabase.storage
+    .from("reciepts")
+    .getPublicUrl(filePath);
+
+  return publicUrlData.publicUrl;
 }
 
 // Inserts a new claim, then kicks off the async Claude-powered fraud check

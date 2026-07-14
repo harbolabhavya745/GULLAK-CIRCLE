@@ -11,11 +11,12 @@ import {
   ChevronRight,
   Sparkles,
   Paperclip,
-  Trash2
+  Trash2,
+  Eye
 } from "lucide-react";
 
 interface ClaimSubmissionPageProps {
-  onSubmitClaim: (reason: string, amount: number, description: string, filename: string) => void;
+  onSubmitClaim: (reason: string, amount: number, description: string, file: File | null) => void;
   triggerConfetti: () => void;
   isDarkMode: boolean;
 }
@@ -28,13 +29,28 @@ export const ClaimSubmissionPage: React.FC<ClaimSubmissionPageProps> = ({
   const [reason, setReason] = useState("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
-  const [file, setFile] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
+  const isPreviewableImage = file ? file.type.startsWith("image/") : false;
+
+  const setSelectedFile = (selected: File) => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setFile(selected);
+    setPreviewUrl(selected.type.startsWith("image/") ? URL.createObjectURL(selected) : null);
+  };
+
+  const clearSelectedFile = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setFile(null);
+    setPreviewUrl(null);
+  };
+
   const handleFakeFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0].name);
+      setSelectedFile(e.target.files[0]);
     }
   };
 
@@ -45,7 +61,7 @@ export const ClaimSubmissionPage: React.FC<ClaimSubmissionPageProps> = ({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setFile(e.dataTransfer.files[0].name);
+      setSelectedFile(e.dataTransfer.files[0]);
     }
   };
 
@@ -62,8 +78,9 @@ export const ClaimSubmissionPage: React.FC<ClaimSubmissionPageProps> = ({
       setShowSuccess(true);
       triggerConfetti();
 
-      // Submit upward to state coordinator
-      onSubmitClaim(reason, parsedAmount, description, file || "emergency_invoice.pdf");
+      // Submit upward to state coordinator — the actual file, so it can be
+      // uploaded to storage and made viewable later from the Claims Feed.
+      onSubmitClaim(reason, parsedAmount, description, file);
     }, 2000);
   };
 
@@ -166,23 +183,44 @@ export const ClaimSubmissionPage: React.FC<ClaimSubmissionPageProps> = ({
                     <p className="text-xs text-slate-500 mt-1">Supports PDF, PNG, JPG up to 10MB (Click to browse files)</p>
                   </div>
                 ) : (
-                  <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/15 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-gold-500/10 text-gold-500 rounded-lg">
-                        <Paperclip className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-slate-200">{file}</p>
+                  <div className="p-4 rounded-xl bg-gold-500/5 border border-gold-500/15 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {isPreviewableImage && previewUrl ? (
+                        <img
+                          src={previewUrl}
+                          alt={file.name}
+                          className="w-12 h-12 rounded-lg object-cover border border-gold-500/20 flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="p-2 bg-gold-500/10 text-gold-500 rounded-lg flex-shrink-0">
+                          <Paperclip className="w-5 h-5" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-slate-200 truncate">{file.name}</p>
                         <p className="text-[10px] text-slate-500 font-mono">Ready for group upload verification</p>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setFile(null)}
-                      className="p-1.5 text-slate-500 hover:text-red-500 transition-colors cursor-pointer"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {isPreviewableImage && previewUrl && (
+                        <a
+                          href={previewUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1.5 text-slate-500 hover:text-gold-500 transition-colors cursor-pointer"
+                          title="Preview full size"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </a>
+                      )}
+                      <button
+                        type="button"
+                        onClick={clearSelectedFile}
+                        className="p-1.5 text-slate-500 hover:text-red-500 transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

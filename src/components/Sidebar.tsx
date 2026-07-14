@@ -116,7 +116,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Footer controls inside sidebar */}
         <div className="p-6 border-t border-slate-200/50 dark:border-gold-500/10 space-y-4">
-          
+
           {/* Light/Dark & Notifications Quick bar */}
           <div className="flex items-center justify-between">
             <button 
