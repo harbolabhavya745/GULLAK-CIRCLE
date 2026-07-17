@@ -26,6 +26,7 @@ interface ClaimsFeedPageProps {
   currentUserId?: string;
   onVoteClaim: (claimId: string, choice: "yes" | "no") => void;
   onExecutePayout: (claimId: string) => void;
+  onRejectClaim: (claimId: string) => void;
   triggerConfetti: () => void;
   poolBalance: number;
 }
@@ -36,6 +37,7 @@ export const ClaimsFeedPage: React.FC<ClaimsFeedPageProps> = ({
   currentUserId,
   onVoteClaim,
   onExecutePayout,
+  onRejectClaim,
   triggerConfetti,
   poolBalance
 }) => {
@@ -53,8 +55,17 @@ export const ClaimsFeedPage: React.FC<ClaimsFeedPageProps> = ({
   // Filter claims based on selected tab
   const filteredClaims = claims.filter((c) => c.status === activeTab);
 
+  // Majority required is a percentage of total circle members: a fully-trusted
+  // claimant (100 score) only needs 51% approval, everyone else needs 70%.
+  const getRequiredMajority = (claimantId: string) => {
+    const totalMembers = Math.max(members.length, 1);
+    const claimant = members.find((m) => m.id === claimantId);
+    const threshold = claimant?.score === 100 ? 0.51 : 0.70;
+    return Math.max(Math.ceil(totalMembers * threshold), 1);
+  };
+
   const handleVote = (claimId: string, choice: "yes" | "no") => {
-    // Find the claim to check if the new vote triggers approval threshold (> 50%)
+    // Find the claim to check if the new vote crosses the approval/rejection threshold
     const currentClaim = claims.find(c => c.id === claimId);
     if (!currentClaim) return;
 
@@ -63,11 +74,11 @@ export const ClaimsFeedPage: React.FC<ClaimsFeedPageProps> = ({
 
     onVoteClaim(claimId, choice);
 
-    // Simulate standard quorum where total active voters (excluding claimant) is around 5.
-    // If YES votes becomes >= 3, let's trigger the Payout modal flow!
+    const requiredMajority = getRequiredMajority(currentClaim.claimantId);
     const newYesCount = currentClaim.votesYes + (choice === "yes" ? 1 : 0);
-    
-    if (choice === "yes" && newYesCount >= 3) {
+    const newNoCount = currentClaim.votesNo + (choice === "no" ? 1 : 0);
+
+    if (choice === "yes" && newYesCount >= requiredMajority) {
       // Trigger the celebration confetti
       triggerConfetti();
       
@@ -87,6 +98,9 @@ export const ClaimsFeedPage: React.FC<ClaimsFeedPageProps> = ({
           triggerConfetti();
         }, 2200);
       }, 800);
+    } else if (choice === "no" && newNoCount >= requiredMajority) {
+      // NO votes reached majority — the claim can no longer be approved, reject it
+      onRejectClaim(claimId);
     }
   };
 
@@ -141,7 +155,8 @@ export const ClaimsFeedPage: React.FC<ClaimsFeedPageProps> = ({
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {filteredClaims.map((claim) => {
-            const approvalPercent = Math.min(((claim.votesYes) / 3) * 100, 100);
+            const requiredMajority = getRequiredMajority(claim.claimantId);
+            const approvalPercent = Math.min((claim.votesYes / requiredMajority) * 100, 100);
             const userHasVoted = currentUserId && claim.votedMembers[currentUserId] !== undefined;
             const isClaimant = currentUserId === claim.claimantId;
 
@@ -246,8 +261,8 @@ export const ClaimsFeedPage: React.FC<ClaimsFeedPageProps> = ({
                 {claim.status === "Pending" && (
                   <div className="space-y-2 pt-2 border-t border-gold-500/10">
                     <div className="flex justify-between text-xs text-slate-500 font-mono">
-                      <span>Approval Progress (Needs 3 YES Votes)</span>
-                      <span className="font-bold text-gold-500">{claim.votesYes} / 3 Votes</span>
+                      <span>Approval Progress (Needs {requiredMajority} YES Votes)</span>
+                      <span className="font-bold text-gold-500">{claim.votesYes} / {requiredMajority} Votes</span>
                     </div>
                     <div className="w-full h-1.5 bg-matte-black rounded-full overflow-hidden">
                       <motion.div 
@@ -389,7 +404,7 @@ export const ClaimsFeedPage: React.FC<ClaimsFeedPageProps> = ({
 
                       <div>
                         <p className="text-slate-500 uppercase font-mono text-[8px] tracking-wider">APPROVAL METHOD</p>
-                        <p className="font-semibold text-slate-200 mt-0.5">Community Ballot (3-0)</p>
+                        <p className="font-semibold text-slate-200 mt-0.5">Community Ballot ({payoutModalClaim.votesYes}-{payoutModalClaim.votesNo})</p>
                       </div>
 
                       <div className="text-right">

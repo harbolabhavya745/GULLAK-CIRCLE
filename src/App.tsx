@@ -30,6 +30,7 @@ import { Sidebar } from "./components/Sidebar";
 import { Navbar } from "./components/Navbar";
 import { NotificationPanel } from "./components/NotificationPanel";
 import { ConfettiEffect } from "./components/ConfettiEffect";
+import { ToastContainer, ToastItem, ToastType } from "./components/Toast";
 
 // Pool of fake merchants/amount ranges the invisible auto-roundup engine
 // picks from — kept outside the component so it's a stable reference.
@@ -59,9 +60,29 @@ export default function App() {
   const [milestoneTarget, setMilestoneTarget] = useState<number>(30000);
   const [circleCreatedAt, setCircleCreatedAt] = useState<string | undefined>(undefined);
   const [members, setMembers] = useState<Member[]>([]);
+  const membersRef = useRef<Member[]>([]);
+  useEffect(() => {
+    membersRef.current = members;
+  }, [members]);
+  // Tracks claim ids this client has already broadcast a resolution notification for,
+  // so a claim's status settling doesn't fire the toast/notification more than once.
+  const notifiedClaimResolutionsRef = useRef<Set<string>>(new Set());
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const showToast = useCallback((message: string, type: ToastType = "info") => {
+    const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 3500);
+  }, []);
+
+  const dismissToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
 
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [currentProfile, setCurrentProfile] = useState<any>(null);
@@ -170,7 +191,43 @@ export default function App() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "claims", filter: `circle_id=eq.${activeCircleId}` },
-        () => loadCircleData()
+        (payload) => {
+          const newRow = payload.new as any;
+          if (
+            payload.eventType === "UPDATE" &&
+            newRow?.id &&
+            !notifiedClaimResolutionsRef.current.has(newRow.id) &&
+            (newRow.status === "Approved" || newRow.status === "Rejected")
+          ) {
+            notifiedClaimResolutionsRef.current.add(newRow.id);
+            const claimant = membersRef.current.find((m) => m.id === newRow.claimant_id);
+            const claimantName = claimant?.name || "A member";
+            const amount = Number(newRow.amount) || 0;
+
+            if (newRow.status === "Approved") {
+              const notif: NotificationItem = {
+                id: "notif-" + Date.now(),
+                message: `₹${amount.toLocaleString()} was successfully disbursed to ${claimantName}.`,
+                time: "Just now",
+                type: "system",
+                unread: true,
+              };
+              setNotifications((prev) => [notif, ...prev]);
+              showToast(`₹${amount.toLocaleString()} paid out to ${claimantName}.`, "success");
+            } else {
+              const notif: NotificationItem = {
+                id: "notif-" + Date.now(),
+                message: `The claim from ${claimantName} was rejected by circle vote.`,
+                time: "Just now",
+                type: "system",
+                unread: true,
+              };
+              setNotifications((prev) => [notif, ...prev]);
+              showToast(`Claim from ${claimantName} was rejected by circle vote.`, "error");
+            }
+          }
+          loadCircleData();
+        }
       )
       .on("postgres_changes", { event: "*", schema: "public", table: "votes" }, () => loadCircleData())
       .subscribe();
@@ -189,14 +246,26 @@ export default function App() {
   // Circle setup handlers
   const handleCreateCircle = async (name: string) => {
     if (!currentUser) return;
-    const circle = await createCircle(name, currentUser.id);
-    setActiveCircleId(circle.id);
+    try {
+      const circle = await createCircle(name, currentUser.id);
+      setActiveCircleId(circle.id);
+      showToast(`"${name}" circle created!`, "success");
+    } catch (err: any) {
+      console.error("Failed to create circle", err);
+      showToast(err?.message || "Couldn't create the circle. Please try again.", "error");
+    }
   };
 
   const handleJoinCircle = async (inviteCode: string) => {
     if (!currentUser) return;
-    const circle = await joinCircleByInviteCode(inviteCode, currentUser.id);
-    setActiveCircleId(circle.id);
+    try {
+      const circle = await joinCircleByInviteCode(inviteCode, currentUser.id);
+      setActiveCircleId(circle.id);
+      showToast("You joined the circle!", "success");
+    } catch (err: any) {
+      console.error("Failed to join circle", err);
+      showToast(err?.message || "Couldn't join with that invite code.", "error");
+    }
   };
 
   // 1. Roundup
@@ -310,7 +379,7 @@ export default function App() {
     await submitClaimWithAiCheck({
       circleId: activeCircleId,
       claimantId: currentUser.id,
-      claimantScore: members.find((m) => m.id === currentUser.id)?.score ?? currentProfile.score ?? 0,
+      claimantScore: currentProfile.score ?? 0,
       reason,
       amount,
       description,
@@ -325,6 +394,7 @@ export default function App() {
       unread: true,
     };
     setNotifications((prev) => [claimNotif, ...prev]);
+    showToast(`Claim of ₹${amount.toLocaleString()} submitted for group review.`, "success");
 
     await loadCircleData();
 
@@ -361,6 +431,7 @@ export default function App() {
         unread: true,
       };
       setNotifications((prev) => [errorNotif, ...prev]);
+      showToast(message, "error");
       return;
     }
 
@@ -374,6 +445,22 @@ export default function App() {
         })
         .eq("id", claimId);
     }
+
+    showToast(`Your ${choice.toUpperCase()} vote was recorded.`, "success");
+
+    await loadCircleData();
+  };
+
+  // 3b. Reject (triggered when NO votes reach the required majority)
+  const handleRejectClaim = async (claimId: string) => {
+    if (!currentUser) return;
+    const targetClaim = claims.find((c) => c.id === claimId);
+    if (!targetClaim) return;
+
+    await supabase
+      .from("claims")
+      .update({ status: "Rejected", payout_status: "Rejected" })
+      .eq("id", claimId);
 
     await loadCircleData();
   };
@@ -396,15 +483,6 @@ export default function App() {
 
     setPoolBalance((prev) => Math.max(prev - targetClaim.amount, 0));
 
-    const payoutNotif: NotificationItem = {
-      id: "notif-" + Date.now(),
-      message: `₹${targetClaim.amount.toLocaleString()} was successfully disbursed to ${targetClaim.claimantName}.`,
-      time: "Just now",
-      type: "system",
-      unread: true,
-    };
-    setNotifications((prev) => [payoutNotif, ...prev]);
-
     await loadCircleData();
   };
 
@@ -423,11 +501,11 @@ export default function App() {
 
     if (error) {
       console.error("Failed to leave circle", error);
-      setLeaveCircleError(
-        error.message.includes("row-level security")
-          ? "You don't have permission to leave this circle."
-          : "Couldn't leave the circle. Please try again."
-      );
+      const message = error.message.includes("row-level security")
+        ? "You don't have permission to leave this circle."
+        : "Couldn't leave the circle. Please try again.";
+      setLeaveCircleError(message);
+      showToast(message, "error");
       return;
     }
 
@@ -438,6 +516,7 @@ export default function App() {
     setClaims([]);
     setPoolBalance(0);
     setActivePage("dashboard");
+    showToast("You left the circle.", "info");
   };
 
   // 4c. Update profile picture
@@ -448,9 +527,12 @@ export default function App() {
     try {
       const avatarUrl = await updateAvatar(currentUser.id, file);
       setCurrentProfile((prev: any) => (prev ? { ...prev, avatar_url: avatarUrl } : prev));
+      showToast("Profile picture updated.", "success");
     } catch (err: any) {
       console.error("Failed to update avatar", err);
-      setAvatarUploadError(err?.message || "Couldn't update your profile picture. Please try again.");
+      const message = err?.message || "Couldn't update your profile picture. Please try again.";
+      setAvatarUploadError(message);
+      showToast(message, "error");
     }
   };
 
@@ -463,10 +545,13 @@ export default function App() {
     setMilestoneTarget(newTarget); // optimistic update
     try {
       await updateMilestone(activeCircleId, newTarget);
+      showToast("Milestone target updated.", "success");
     } catch (err: any) {
       console.error("Failed to update milestone", err);
       setMilestoneTarget(prevTarget); // roll back
-      setMilestoneUpdateError(err?.message || "Couldn't update the milestone. Please try again.");
+      const message = err?.message || "Couldn't update the milestone. Please try again.";
+      setMilestoneUpdateError(message);
+      showToast(message, "error");
     }
   };
 
@@ -533,6 +618,7 @@ export default function App() {
             currentUserId={currentUser?.id}
             onVoteClaim={handleVoteClaim}
             onExecutePayout={handleExecutePayout}
+            onRejectClaim={handleRejectClaim}
             triggerConfetti={handleTriggerConfetti}
             poolBalance={poolBalance}
           />
@@ -543,7 +629,6 @@ export default function App() {
             claims={claims}
             poolBalance={poolBalance}
             profile={currentProfile}
-            myMember={members.find((m) => m.id === currentUser?.id)}
             email={currentUser?.email}
             myTransactions={transactions.filter((t) => t.userId === currentUser?.id)}
             memberCount={members.length}
@@ -598,12 +683,18 @@ export default function App() {
   }
 
   if (!activeCircleId) {
-    return <CircleSetupPage onCreate={handleCreateCircle} onJoin={handleJoinCircle} />;
+    return (
+      <>
+        <CircleSetupPage onCreate={handleCreateCircle} onJoin={handleJoinCircle} />
+        <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+      </>
+    );
   }
 
   return (
     <div className={`min-h-screen font-sans flex ${isDarkMode ? "bg-matte-black text-slate-100" : "bg-gold-50 text-slate-900"}`}>
       <ConfettiEffect trigger={confettiTrigger} />
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       <Sidebar
         activePage={activePage}
         onNavigate={setActivePage}
