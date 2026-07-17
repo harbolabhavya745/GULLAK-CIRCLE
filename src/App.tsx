@@ -310,7 +310,7 @@ export default function App() {
     await submitClaimWithAiCheck({
       circleId: activeCircleId,
       claimantId: currentUser.id,
-      claimantScore: currentProfile.score ?? 0,
+      claimantScore: members.find((m) => m.id === currentUser.id)?.score ?? currentProfile.score ?? 0,
       reason,
       amount,
       description,
@@ -543,6 +543,7 @@ export default function App() {
             claims={claims}
             poolBalance={poolBalance}
             profile={currentProfile}
+            myMember={members.find((m) => m.id === currentUser?.id)}
             email={currentUser?.email}
             myTransactions={transactions.filter((t) => t.userId === currentUser?.id)}
             memberCount={members.length}

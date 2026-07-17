@@ -26,6 +26,7 @@ interface ProfilePageProps {
   claims: Claim[];
   poolBalance: number;
   profile: any;
+  myMember?: Member;
   email?: string;
   myTransactions?: Transaction[];
   memberCount?: number;
@@ -35,7 +36,7 @@ interface ProfilePageProps {
   avatarUploadError?: string;
 }
 
-export const ProfilePage: React.FC<ProfilePageProps> = ({ claims, poolBalance, profile, email, myTransactions = [], memberCount = 0, onLeaveCircle, leaveCircleError = "", onUpdateAvatar, avatarUploadError = "" }) => {
+export const ProfilePage: React.FC<ProfilePageProps> = ({ claims, poolBalance, profile, myMember, email, myTransactions = [], memberCount = 0, onLeaveCircle, leaveCircleError = "", onUpdateAvatar, avatarUploadError = "" }) => {
   const [showFastTrackInfo, setShowFastTrackInfo] = React.useState(false);
   const [showLeaveModal, setShowLeaveModal] = React.useState(false);
   const [isLeaving, setIsLeaving] = React.useState(false);
@@ -86,8 +87,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ claims, poolBalance, p
     name: profile?.name || "Loading...",
     role: profile?.role || "Member",
     avatar: profile?.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(profile?.name || "U")}`,
-    score: profile?.score ?? 0,
-    totalContributed: Number(profile?.total_contributed ?? 0),
+    // profiles.score / profiles.total_contributed are never written to (RLS
+    // blocks a user from updating other members' rows when scores get
+    // recalculated), so read the live values computed from all transactions
+    // in fetchMembers instead — same source of truth as the Leaderboard.
+    score: myMember?.score ?? profile?.score ?? 0,
+    totalContributed: Number(myMember?.totalContributed ?? profile?.total_contributed ?? 0),
     badge: profile?.badge || "New Member",
     email: email || "",
     joinedDate: profile?.created_at
