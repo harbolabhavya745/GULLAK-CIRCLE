@@ -242,12 +242,31 @@ const handleOAuthLogin = async (provider: "google") => {
               ) : (
                 <motion.form 
                   key="form"
-                  onSubmit={handleLogin} 
+                  onSubmit={isSignup ? handleSignup : handleLogin} 
                   className="space-y-5"
                 >
                   {error && (
                     <div className="p-3.5 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-400">
                       {error}
+                    </div>
+                  )}
+
+                  {/* Full Name Field — signup only */}
+                  {isSignup && (
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-mono text-slate-500 uppercase tracking-widest font-bold block">
+                        Full Name
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          placeholder="Your name"
+                          className="w-full px-4 py-3 bg-matte-black/50 border border-gold-500/15 rounded-2xl text-slate-100 placeholder-slate-600 focus:outline-none focus:border-gold-500/50 transition-all text-sm font-sans"
+                          required
+                        />
+                      </div>
                     </div>
                   )}
 
@@ -310,7 +329,7 @@ const handleOAuthLogin = async (provider: "google") => {
                       <div className="w-4 h-4 border-2 border-matte-black border-t-transparent rounded-full animate-spin" />
                     ) : (
                       <>
-                        Unlock Circle <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-0.5 transition-transform" />
+                        {isSignup ? "Create Circle" : "Unlock Circle"} <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-0.5 transition-transform" />
                       </>
                     )}
                   </button>
@@ -337,6 +356,18 @@ const handleOAuthLogin = async (provider: "google") => {
                       </>
                     )}
                   </button>
+
+                  {/* Login <-> Signup mode toggle */}
+                  <p className="text-center text-xs text-slate-400">
+                    {isSignup ? "Already have a circle?" : "New to Gullak Circle?"}{" "}
+                    <button
+                      type="button"
+                      onClick={toggleMode}
+                      className="text-gold-500 hover:text-gold-400 font-bold transition-colors"
+                    >
+                      {isSignup ? "Log in" : "Sign up"}
+                    </button>
+                  </p>
 
                 </motion.form>
               )}

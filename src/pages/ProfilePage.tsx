@@ -40,7 +40,11 @@ interface ProfilePageProps {
   nameUpdateError?: string;
 }
 
+<<<<<<< HEAD
 export const ProfilePage: React.FC<ProfilePageProps> = ({ claims, poolBalance, profile, myMember, email, myTransactions = [], memberCount = 0, onLeaveCircle, leaveCircleError = "", onUpdateAvatar, avatarUploadError = "", onUpdateName, nameUpdateError = "" }) => {
+=======
+export const ProfilePage: React.FC<ProfilePageProps> = ({ claims, poolBalance, profile, myMember, email, myTransactions = [], memberCount = 0, onLeaveCircle, leaveCircleError = "", onUpdateAvatar, avatarUploadError = "" }) => {
+>>>>>>> 67cd0f5767ffced54b7e5d066dd26cd7f42f8d53
   const [showFastTrackInfo, setShowFastTrackInfo] = React.useState(false);
   const [showLeaveModal, setShowLeaveModal] = React.useState(false);
   const [isLeaving, setIsLeaving] = React.useState(false);
