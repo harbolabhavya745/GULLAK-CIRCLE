@@ -17,6 +17,16 @@ function colorForId(id: string) {
   return MEMBER_COLORS[hash % MEMBER_COLORS.length];
 }
 
+// Members with a higher Contribution Score are more trusted by the circle,
+// so their claims need fewer YES votes to clear. Tiered instead of linear so
+// it's easy to reason about and tune.
+export function getVotesRequired(contributionScore: number): number {
+  if (contributionScore >= 90) return 2;
+  if (contributionScore >= 70) return 3;
+  if (contributionScore >= 40) return 4;
+  return 5;
+}
+
 function timeAgo(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diffMs / 60000);
@@ -88,6 +98,20 @@ export async function updateAvatar(userId: string, file: File): Promise<string> 
   return avatarUrl;
 }
 
+// Updates the display name on the caller's own profile row.
+export async function updateName(userId: string, name: string): Promise<string> {
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error("Name can't be empty.");
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ name: trimmed })
+    .eq("id", userId);
+  if (error) throw error;
+
+  return trimmed;
+}
+
 export async function fetchMyCircleId(userId: string): Promise<string | null> {
   const { data, error } = await supabase
     .from("circle_members")
@@ -143,6 +167,39 @@ export async function fetchCircle(circleId: string) {
   return data;
 }
 
+// Updates the circle's savings goal shown as "Next Circle Milestone" on the
+// Dashboard. Requires a `milestone_target` numeric column on `circles`
+// (see project setup notes) — falls back to 30000 client-side if absent.
+export async function updateMilestone(circleId: string, milestoneTarget: number): Promise<void> {
+  const { error } = await supabase
+    .from("circles")
+    .update({ milestone_target: milestoneTarget })
+    .eq("id", circleId);
+  if (error) throw error;
+}
+
+// Turns raw contribution amounts into a 0-100 score that moves live as
+// members contribute. Weighted blend of:
+//  - relative share vs. the circle's top contributor (rewards being ahead)
+//  - relative share vs. the circle average (rewards being above the pack)
+// A 15-point floor keeps brand-new members from showing 0 and looking "bad".
+export function computeContributionScore(
+  totalContributed: number,
+  allContributions: number[]
+): number {
+  const contributions = allContributions.length > 0 ? allContributions : [totalContributed];
+  const max = Math.max(...contributions, 0);
+  const avg = contributions.reduce((sum, v) => sum + v, 0) / contributions.length;
+
+  if (max <= 0) return 50; // nobody has contributed anything yet
+
+  const vsTop = (totalContributed / max) * 100;
+  const vsAvg = avg > 0 ? Math.min(150, (totalContributed / avg) * 100) : 100;
+
+  const blended = vsTop * 0.6 + vsAvg * 0.4;
+  return Math.round(Math.min(100, Math.max(15, blended)));
+}
+
 export async function fetchMembers(circleId: string): Promise<Member[]> {
   const { data, error } = await supabase
     .from("circle_members")
@@ -150,21 +207,43 @@ export async function fetchMembers(circleId: string): Promise<Member[]> {
     .eq("circle_id", circleId);
   if (error) throw error;
 
-  return (data ?? [])
-    .filter((row: any) => row.profiles)
-    .map((row: any) => {
-      const p = row.profiles;
-      return {
-        id: p.id,
-        name: p.name,
-        avatar: p.avatar_url,
-        role: p.role || "Member",
-        totalContributed: Number(p.total_contributed ?? 0),
-        score: p.score ?? 0,
-        badge: p.badge || "New Member",
-        color: colorForId(p.id),
-      } as Member;
-    });
+  const rows = (data ?? []).filter((row: any) => row.profiles);
+
+  // Contribution totals are derived live from the transactions table rather
+  // than trusting a stored `total_contributed` column on profiles. Writing
+  // that column from the client requires RLS to trust a user's own claimed
+  // contribution (and, worse, needs write access to *other* members' rows
+  // whenever their score gets recalculated) — RLS correctly blocks that, so
+  // the column silently never updated. Summing straight from transactions
+  // needs no extra write permissions and can't be faked client-side.
+  const { data: txRows, error: txError } = await supabase
+    .from("transactions")
+    .select("user_id, roundup")
+    .eq("circle_id", circleId);
+  if (txError) throw txError;
+
+  const contributionByUser: Record<string, number> = {};
+  for (const t of txRows ?? []) {
+    if (!t.user_id) continue;
+    contributionByUser[t.user_id] = (contributionByUser[t.user_id] ?? 0) + Number(t.roundup ?? 0);
+  }
+
+  const allContributions = rows.map((row: any) => contributionByUser[row.profiles.id] ?? 0);
+
+  return rows.map((row: any) => {
+    const p = row.profiles;
+    const totalContributed = contributionByUser[p.id] ?? 0;
+    return {
+      id: p.id,
+      name: p.name,
+      avatar: p.avatar_url,
+      role: p.role || "Member",
+      totalContributed,
+      score: computeContributionScore(totalContributed, allContributions),
+      badge: p.badge || "New Member",
+      color: colorForId(p.id),
+    } as Member;
+  });
 }
 
 export async function fetchTransactions(circleId: string): Promise<Transaction[]> {
@@ -211,25 +290,107 @@ export async function fetchClaims(circleId: string): Promise<Claim[]> {
     }
   }
 
-  return (data ?? []).map((c: any) => ({
-    id: c.id,
-    claimantId: c.claimant_id,
-    claimantName: c.claimant?.name || "Unknown Member",
-    claimantAvatar: c.claimant?.avatar_url || "",
-    reason: c.reason,
-    amount: Number(c.amount),
-    description: c.description || "",
-    date: new Date(c.created_at).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" }),
-    status: c.status || "Pending",
-    aiRiskLabel: c.ai_risk_label || "Needs Review",
-    aiRiskConfidence: c.ai_risk_confidence ?? 0,
-    aiRiskReason: c.ai_risk_reason || "",
-    votesYes: c.votes_yes ?? 0,
-    votesNo: c.votes_no ?? 0,
-    votedMembers: votesByClaimId[c.id] || {},
-    receiptUrl: c.receipt_url,
-    payoutStatus: c.payout_status || "Awaiting Vote",
-  }));
+  return (data ?? []).map((c: any) => {
+    const claimantScore = c.claimant?.score ?? 0;
+    return {
+      id: c.id,
+      claimantId: c.claimant_id,
+      claimantName: c.claimant?.name || "Unknown Member",
+      claimantAvatar: c.claimant?.avatar_url || "",
+      claimantScore,
+      votesRequired: getVotesRequired(claimantScore),
+      reason: c.reason,
+      amount: Number(c.amount),
+      description: c.description || "",
+      date: new Date(c.created_at).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" }),
+      status: c.status || "Pending",
+      aiRiskLabel: c.ai_risk_label || "Needs Review",
+      aiRiskConfidence: c.ai_risk_confidence ?? 0,
+      aiRiskReason: c.ai_risk_reason || "",
+      votesYes: c.votes_yes ?? 0,
+      votesNo: c.votes_no ?? 0,
+      votedMembers: votesByClaimId[c.id] || {},
+      receiptUrl: c.receipt_url,
+      payoutStatus: c.payout_status || "Awaiting Vote",
+    } as Claim;
+  });
+}
+
+// Uploads a claim's receipt/invoice image to Supabase Storage and returns its
+// public URL. Uses the "reciepts" bucket (matches the actual bucket name set
+// up in the Supabase dashboard — note the spelling).
+export async function uploadClaimReceipt(userId: string, file: File): Promise<string> {
+  const fileExt = file.name.split(".").pop() || "jpg";
+  const filePath = `${userId}/${Date.now()}.${fileExt}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("reciepts")
+    .upload(filePath, file, { upsert: true, cacheControl: "3600" });
+  if (uploadError) throw uploadError;
+
+  const { data: publicUrlData } = supabase.storage
+    .from("reciepts")
+    .getPublicUrl(filePath);
+
+  return publicUrlData.publicUrl;
+}
+
+// Inserts a new claim, then kicks off the async Claude-powered fraud check
+// (supabase/functions/fraud-check) which writes ai_risk_* fields back onto
+// the row once it completes. Voting opens immediately, but this lets the
+// AI Guard badge populate a few seconds later without blocking submission.
+export async function submitClaimWithAiCheck(params: {
+  circleId: string;
+  claimantId: string;
+  claimantScore: number;
+  reason: string;
+  amount: number;
+  description: string;
+  receiptUrl: string;
+}): Promise<void> {
+  const { circleId, claimantId, claimantScore, reason, amount, description, receiptUrl } = params;
+
+  const { data: inserted, error: insertError } = await supabase
+    .from("claims")
+    .insert({
+      circle_id: circleId,
+      claimant_id: claimantId,
+      reason,
+      amount,
+      description,
+      receipt_url: receiptUrl,
+      status: "Pending",
+      payout_status: "Awaiting Vote",
+      votes_yes: 0,
+      votes_no: 0,
+    })
+    .select()
+    .single();
+  if (insertError) throw insertError;
+
+  const { count: previousClaims } = await supabase
+    .from("claims")
+    .select("id", { count: "exact", head: true })
+    .eq("claimant_id", claimantId)
+    .eq("circle_id", circleId)
+    .neq("id", inserted.id);
+
+  // Fire-and-forget: don't let a slow/unavailable AI function block the
+  // submission flow. Errors are logged but not surfaced to the claimant.
+  supabase.functions
+    .invoke("fraud-check", {
+      body: {
+        claim: {
+          id: inserted.id,
+          reason,
+          amount,
+          description,
+          contributor_score: claimantScore,
+          previous_claims: previousClaims ?? 0,
+        },
+      },
+    })
+    .catch((err) => console.error("Fraud check failed", err));
 }
 
 export function computePoolStats(
