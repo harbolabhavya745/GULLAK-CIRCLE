@@ -529,7 +529,6 @@ export default function App() {
       const message = err?.message || "Couldn't update your profile picture. Please try again.";
       setAvatarUploadError(message);
       showToast(message, "error");
-<<<<<<< HEAD
     }
   };
 
@@ -547,8 +546,6 @@ export default function App() {
       const message = err?.message || "Couldn't update your name. Please try again.";
       setNameUpdateError(message);
       showToast(message, "error");
-=======
->>>>>>> 67cd0f5767ffced54b7e5d066dd26cd7f42f8d53
     }
   };
 
