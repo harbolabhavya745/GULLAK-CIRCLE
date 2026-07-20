@@ -18,7 +18,9 @@ import {
   Users,
   LogOut,
   AlertTriangle,
-  Camera
+  Camera,
+  Pencil,
+  Check
 } from "lucide-react";
 import { Member, Claim, Transaction } from "../types";
 
@@ -34,15 +36,23 @@ interface ProfilePageProps {
   leaveCircleError?: string;
   onUpdateAvatar?: (file: File) => Promise<void> | void;
   avatarUploadError?: string;
+  onUpdateName?: (name: string) => Promise<void> | void;
+  nameUpdateError?: string;
 }
 
-export const ProfilePage: React.FC<ProfilePageProps> = ({ claims, poolBalance, profile, myMember, email, myTransactions = [], memberCount = 0, onLeaveCircle, leaveCircleError = "", onUpdateAvatar, avatarUploadError = "" }) => {
+export const ProfilePage: React.FC<ProfilePageProps> = ({ claims, poolBalance, profile, myMember, email, myTransactions = [], memberCount = 0, onLeaveCircle, leaveCircleError = "", onUpdateAvatar, avatarUploadError = "", onUpdateName, nameUpdateError = "" }) => {
   const [showFastTrackInfo, setShowFastTrackInfo] = React.useState(false);
   const [showLeaveModal, setShowLeaveModal] = React.useState(false);
   const [isLeaving, setIsLeaving] = React.useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = React.useState(false);
   const [localAvatarError, setLocalAvatarError] = React.useState("");
   const avatarInputRef = React.useRef<HTMLInputElement>(null);
+
+  const [isEditingName, setIsEditingName] = React.useState(false);
+  const [nameDraft, setNameDraft] = React.useState("");
+  const [isSavingName, setIsSavingName] = React.useState(false);
+  const [localNameError, setLocalNameError] = React.useState("");
+  const nameInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleAvatarClick = () => {
     if (isUploadingAvatar) return;
@@ -72,6 +82,53 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ claims, poolBalance, p
       await onUpdateAvatar(file);
     } finally {
       setIsUploadingAvatar(false);
+    }
+  };
+
+  const handleStartEditName = () => {
+    setNameDraft(profile?.name || "");
+    setLocalNameError("");
+    setIsEditingName(true);
+    // Focus after the input mounts
+    setTimeout(() => nameInputRef.current?.focus(), 0);
+  };
+
+  const handleCancelEditName = () => {
+    setIsEditingName(false);
+    setLocalNameError("");
+  };
+
+  const handleSaveName = async () => {
+    const trimmed = nameDraft.trim();
+    if (!trimmed) {
+      setLocalNameError("Name can't be empty.");
+      return;
+    }
+    if (trimmed.length > 40) {
+      setLocalNameError("Name must be 40 characters or fewer.");
+      return;
+    }
+    if (!onUpdateName) {
+      setIsEditingName(false);
+      return;
+    }
+    setLocalNameError("");
+    setIsSavingName(true);
+    try {
+      await onUpdateName(trimmed);
+      setIsEditingName(false);
+    } finally {
+      setIsSavingName(false);
+    }
+  };
+
+  const handleNameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSaveName();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      handleCancelEditName();
     }
   };
 
@@ -147,11 +204,61 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ claims, poolBalance, p
           </div>
           <div className="space-y-2">
             <div className="flex flex-wrap gap-2.5 items-center justify-center md:justify-start">
-              <h3 className="text-2xl font-bold text-slate-100 font-sans tracking-tight">{user.name}</h3>
+              {isEditingName ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={nameInputRef}
+                    type="text"
+                    value={nameDraft}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    onKeyDown={handleNameKeyDown}
+                    disabled={isSavingName}
+                    maxLength={40}
+                    className="text-xl font-bold text-slate-100 font-sans tracking-tight bg-matte-black border border-gold-500/30 rounded-lg px-2.5 py-1 focus:outline-none focus:border-gold-500/60 disabled:opacity-50 w-48"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSaveName}
+                    disabled={isSavingName}
+                    aria-label="Save name"
+                    className="p-1.5 rounded-lg bg-gold-500/10 text-gold-500 hover:bg-gold-500/20 transition-colors disabled:opacity-50 cursor-pointer"
+                  >
+                    {isSavingName ? (
+                      <div className="w-3.5 h-3.5 border-2 border-gold-500 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Check className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancelEditName}
+                    disabled={isSavingName}
+                    aria-label="Cancel"
+                    className="p-1.5 rounded-lg bg-slate-500/10 text-slate-400 hover:bg-slate-500/20 transition-colors disabled:opacity-50 cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 group">
+                  <h3 className="text-2xl font-bold text-slate-100 font-sans tracking-tight">{user.name}</h3>
+                  <button
+                    type="button"
+                    onClick={handleStartEditName}
+                    aria-label="Change name"
+                    className="p-1 rounded-lg text-slate-500 hover:text-gold-500 hover:bg-gold-500/10 transition-colors cursor-pointer opacity-60 group-hover:opacity-100"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
               <span className="px-2.5 py-0.5 bg-gold-500/10 text-gold-500 text-[9px] font-bold rounded-full border border-gold-500/35 font-mono uppercase tracking-wider">
                 {user.role}
               </span>
             </div>
+            {(localNameError || nameUpdateError) && (
+              <p className="text-[10px] text-red-400 font-mono">{localNameError || nameUpdateError}</p>
+            )}
             <p className="text-xs text-slate-400 font-mono">{user.email} • Joined {user.joinedDate}</p>
             
             <div className="flex flex-wrap gap-2 justify-center md:justify-start pt-1">

@@ -98,6 +98,21 @@ export async function updateAvatar(userId: string, file: File): Promise<string> 
   return avatarUrl;
 }
 
+// Updates the display name on a member's own profile row.
+export async function updateName(userId: string, name: string): Promise<string> {
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error("Name can't be empty.");
+  if (trimmed.length > 40) throw new Error("Name must be 40 characters or fewer.");
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ name: trimmed })
+    .eq("id", userId);
+  if (error) throw error;
+
+  return trimmed;
+}
+
 export async function fetchMyCircleId(userId: string): Promise<string | null> {
   const { data, error } = await supabase
     .from("circle_members")

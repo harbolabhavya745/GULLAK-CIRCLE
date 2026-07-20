@@ -4,6 +4,7 @@ import { supabase } from "./lib/supabase";
 import {
   ensureProfile,
   updateAvatar,
+  updateName,
   submitClaimWithAiCheck,
   uploadClaimReceipt,
   updateMilestone,
@@ -531,6 +532,23 @@ export default function App() {
     }
   };
 
+  // 4c-2. Update display name
+  const [nameUpdateError, setNameUpdateError] = useState("");
+  const handleUpdateName = async (name: string) => {
+    if (!currentUser) return;
+    setNameUpdateError("");
+    try {
+      const newName = await updateName(currentUser.id, name);
+      setCurrentProfile((prev: any) => (prev ? { ...prev, name: newName } : prev));
+      showToast("Name updated.", "success");
+    } catch (err: any) {
+      console.error("Failed to update name", err);
+      const message = err?.message || "Couldn't update your name. Please try again.";
+      setNameUpdateError(message);
+      showToast(message, "error");
+    }
+  };
+
   // 4d. Update circle milestone target (editable from Dashboard)
   const [milestoneUpdateError, setMilestoneUpdateError] = useState("");
   const handleUpdateMilestone = async (newTarget: number) => {
@@ -629,6 +647,8 @@ export default function App() {
             leaveCircleError={leaveCircleError}
             onUpdateAvatar={handleUpdateAvatar}
             avatarUploadError={avatarUploadError}
+            onUpdateName={handleUpdateName}
+            nameUpdateError={nameUpdateError}
           />
         );
       default:
