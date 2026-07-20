@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Trophy, Crown, Medal, TrendingUp, IndianRupee } from "lucide-react";
 import { Member } from "../types";
@@ -8,8 +8,6 @@ interface LeaderboardPageProps {
   currentUserId?: string;
 }
 
-type SortMode = "score" | "amount";
-
 const RANK_STYLES = [
   { ring: "ring-2 ring-yellow-400/60", badge: "bg-yellow-400 text-matte-black", icon: Crown },
   { ring: "ring-2 ring-slate-300/40", badge: "bg-slate-300 text-matte-black", icon: Medal },
@@ -17,15 +15,11 @@ const RANK_STYLES = [
 ];
 
 export const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ members, currentUserId }) => {
-  const [sortMode, setSortMode] = useState<SortMode>("score");
-
   const ranked = useMemo(() => {
     return [...members].sort((a, b) =>
-      sortMode === "score"
-        ? b.score - a.score || b.totalContributed - a.totalContributed
-        : b.totalContributed - a.totalContributed || b.score - a.score
+      b.score - a.score || b.totalContributed - a.totalContributed
     );
-  }, [members, sortMode]);
+  }, [members]);
 
   const topScore = ranked.length > 0 ? Math.max(...ranked.map((m) => m.score)) : 0;
 
@@ -39,23 +33,6 @@ export const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ members, curre
             Leaderboard
           </h2>
           <p className="text-xs text-slate-500 mt-1">Ranked live by contribution — score updates as members deposit</p>
-        </div>
-
-        {/* Sort toggle */}
-        <div className="inline-flex p-1 rounded-2xl bg-matte-charcoal border border-gold-500/10">
-          {(["score", "amount"] as SortMode[]).map((mode) => (
-            <button
-              key={mode}
-              onClick={() => setSortMode(mode)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wide transition-all ${
-                sortMode === mode
-                  ? "bg-gold-500 text-matte-black shadow-md shadow-gold-500/20"
-                  : "text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              {mode === "score" ? "By Score" : "By ₹ Contributed"}
-            </button>
-          ))}
         </div>
       </div>
 

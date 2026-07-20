@@ -51,7 +51,6 @@ const AUTO_MERCHANTS: { name: string; min: number; max: number }[] = [
 
 export default function App() {
   const [activePage, setActivePage] = useState<string>("landing");
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(true);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
   const [notificationPanelOpen, setNotificationPanelOpen] = useState<boolean>(false);
   const [confettiTrigger, setConfettiTrigger] = useState<boolean>(false);
@@ -97,14 +96,10 @@ export default function App() {
   const [lastAutoTx, setLastAutoTx] = useState<{ merchant: string; roundup: number; at: number } | null>(null);
   const autoEngineTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Dark mode
+  // Dark mode is permanently enabled (no day/night toggle)
   useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, [isDarkMode]);
+    document.documentElement.classList.add("dark");
+  }, []);
 
   // Get logged in user + make sure a profile row exists for them
   useEffect(() => {
@@ -575,7 +570,6 @@ export default function App() {
             pendingClaims={pendingClaimsList}
             poolStats={poolStats}
             onNavigate={setActivePage}
-            isDarkMode={isDarkMode}
             milestoneTarget={milestoneTarget}
             onUpdateMilestone={handleUpdateMilestone}
             milestoneUpdateError={milestoneUpdateError}
@@ -607,7 +601,6 @@ export default function App() {
           <ClaimSubmissionPage
             onSubmitClaim={handleSubmitClaim}
             triggerConfetti={handleTriggerConfetti}
-            isDarkMode={isDarkMode}
           />
         );
       case "claims":
@@ -647,7 +640,6 @@ export default function App() {
             pendingClaims={pendingClaimsList}
             poolStats={poolStats}
             onNavigate={setActivePage}
-            isDarkMode={isDarkMode}
             milestoneTarget={milestoneTarget}
             onUpdateMilestone={handleUpdateMilestone}
             milestoneUpdateError={milestoneUpdateError}
@@ -668,8 +660,6 @@ export default function App() {
     return (
       <LoginPage
         onLaunch={() => setActivePage("dashboard")}
-        isDarkMode={isDarkMode}
-        onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
       />
     );
   }
@@ -692,7 +682,7 @@ export default function App() {
   }
 
   return (
-    <div className={`min-h-screen font-sans flex ${isDarkMode ? "bg-matte-black text-slate-100" : "bg-gold-50 text-slate-900"}`}>
+    <div className="min-h-screen font-sans flex bg-matte-black text-slate-100">
       <ConfettiEffect trigger={confettiTrigger} />
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       <Sidebar
@@ -700,10 +690,6 @@ export default function App() {
         onNavigate={setActivePage}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        isDarkMode={isDarkMode}
-        onToggleDarkMode={() => setIsDarkMode(!isDarkMode)}
-        notificationCount={unreadNotificationsCount}
-        onOpenNotifications={() => setNotificationPanelOpen(true)}
       />
       <div className="flex-1 flex flex-col lg:pl-72 min-h-screen overflow-x-hidden">
         <Navbar

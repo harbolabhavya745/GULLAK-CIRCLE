@@ -28,7 +28,6 @@ interface DashboardPageProps {
   pendingClaims: Claim[];
   poolStats: PoolStats;
   onNavigate: (page: string) => void;
-  isDarkMode: boolean;
   milestoneTarget: number;
   onUpdateMilestone: (newTarget: number) => Promise<void> | void;
   milestoneUpdateError?: string;
@@ -41,7 +40,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   pendingClaims,
   poolStats,
   onNavigate,
-  isDarkMode,
   milestoneTarget,
   onUpdateMilestone,
   milestoneUpdateError = ""
