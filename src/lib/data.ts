@@ -158,6 +158,20 @@ export async function joinCircleByInviteCode(inviteCode: string, userId: string)
   return circle;
 }
 
+export async function updateCircleName(circleId: string, name: string): Promise<string> {
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error("Circle name can't be empty.");
+  if (trimmed.length > 60) throw new Error("Circle name must be 60 characters or fewer.");
+
+  const { error } = await supabase
+    .from("circles")
+    .update({ name: trimmed })
+    .eq("id", circleId);
+  if (error) throw error;
+
+  return trimmed;
+}
+
 export async function fetchCircle(circleId: string) {
   const { data, error } = await supabase
     .from("circles")

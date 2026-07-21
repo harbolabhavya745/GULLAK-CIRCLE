@@ -22,6 +22,7 @@ import {
 import { Member, Transaction, Claim, PoolStats } from "../types";
 
 interface DashboardPageProps {
+  circleName: string;
   poolBalance: number;
   members: Member[];
   recentTransactions: Transaction[];
@@ -34,6 +35,7 @@ interface DashboardPageProps {
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({
+  circleName,
   poolBalance,
   members,
   recentTransactions,
@@ -130,7 +132,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
           <div className="md:col-span-2 space-y-2">
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-100">
-              Welcome back to Gullak Circle!
+              Welcome back to {circleName}!
             </h2>
             <p className="text-slate-400 text-sm max-w-xl leading-relaxed">
               You saved ₹{savedThisWeek.toFixed(2)} this week from spare roundups. Your circle is fully secure, and {pendingClaims.length} pending claim{pendingClaims.length === 1 ? "" : "s"} await review.
@@ -449,7 +451,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 <p className="text-xs text-slate-500">No pending emergency claims require review.</p>
               </div>
             ) : (
-              <div className="space-y-4 max-h-[420px] overflow-y-auto pr-1 -mr-1">
+              <div className="space-y-4">
                 {pendingClaims.map((claim) => (
                   <div
                     key={claim.id}

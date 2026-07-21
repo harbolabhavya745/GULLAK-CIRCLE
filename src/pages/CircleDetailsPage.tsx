@@ -13,13 +13,18 @@ import {
   ArrowUpRight,
   Copy,
   Check,
-  KeyRound
+  KeyRound,
+  Pencil,
+  X
 } from "lucide-react";
 import { Member, Transaction, Claim } from "../types";
 import { LeaderboardPage } from "./LeaderboardPage";
 import { ContributionTrendChart } from "../components/ContributionTrendChart";
 
 interface CircleDetailsPageProps {
+  circleName: string;
+  onUpdateCircleName?: (newName: string) => Promise<void> | void;
+  circleNameUpdateError?: string;
   poolBalance: number;
   members: Member[];
   recentTransactions: Transaction[];
@@ -30,6 +35,9 @@ interface CircleDetailsPageProps {
 }
 
 export const CircleDetailsPage: React.FC<CircleDetailsPageProps> = ({
+  circleName,
+  onUpdateCircleName,
+  circleNameUpdateError = "",
   poolBalance,
   members,
   recentTransactions,
@@ -39,6 +47,40 @@ export const CircleDetailsPage: React.FC<CircleDetailsPageProps> = ({
   currentUserId
 }) => {
   const [copied, setCopied] = useState(false);
+
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState(circleName);
+  const [isSavingName, setIsSavingName] = useState(false);
+  const [nameError, setNameError] = useState("");
+
+  const startEditingName = () => {
+    setNameInput(circleName);
+    setNameError("");
+    setIsEditingName(true);
+  };
+
+  const cancelEditingName = () => {
+    setIsEditingName(false);
+    setNameError("");
+  };
+
+  const saveName = async () => {
+    const trimmed = nameInput.trim();
+    if (!trimmed) {
+      setNameError("Circle name can't be empty.");
+      return;
+    }
+    setIsSavingName(true);
+    setNameError("");
+    try {
+      await onUpdateCircleName?.(trimmed);
+      setIsEditingName(false);
+    } catch (err) {
+      setNameError("Couldn't save. Try again.");
+    } finally {
+      setIsSavingName(false);
+    }
+  };
 
   const handleCopyInviteCode = async () => {
     if (!inviteCode) return;
@@ -72,7 +114,65 @@ export const CircleDetailsPage: React.FC<CircleDetailsPageProps> = ({
     <div className="space-y-8 pb-12">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-slate-100">Gullak Trust Circle</h2>
+        {isEditingName ? (
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                autoFocus
+                value={nameInput}
+                onChange={(e) => setNameInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") saveName();
+                  if (e.key === "Escape") cancelEditingName();
+                }}
+                disabled={isSavingName}
+                maxLength={60}
+                className="px-3 py-1.5 rounded-lg bg-matte-charcoal border border-gold-500/20 focus:outline-none focus:ring-1 focus:ring-gold-500 text-2xl font-bold text-slate-100"
+              />
+              <button
+                type="button"
+                onClick={saveName}
+                disabled={isSavingName}
+                aria-label="Save circle name"
+                className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {isSavingName ? (
+                  <div className="w-3.5 h-3.5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Check className="w-4 h-4" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={cancelEditingName}
+                disabled={isSavingName}
+                aria-label="Cancel editing circle name"
+                className="p-1.5 text-slate-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            {nameError && <p className="text-[11px] text-red-400">{nameError}</p>}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-bold text-slate-100">{circleName}</h2>
+            {onUpdateCircleName && (
+              <button
+                type="button"
+                onClick={startEditingName}
+                aria-label="Edit circle name"
+                className="p-1.5 text-slate-500 hover:text-gold-500 rounded-lg hover:bg-gold-500/10 transition-colors cursor-pointer"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        )}
+        {circleNameUpdateError && !isEditingName && (
+          <p className="text-[11px] text-red-400 mt-1">{circleNameUpdateError}</p>
+        )}
         <p className="text-xs text-slate-500 mt-1">Manage, audit and inspect active mutual participants and overall stats</p>
       </div>
 
@@ -169,15 +269,15 @@ export const CircleDetailsPage: React.FC<CircleDetailsPageProps> = ({
           {/* Recent Group activity Timeline */}
           <div className="p-6 rounded-3xl bg-matte-charcoal border border-gold-500/10 shadow-sm">
             <h3 className="text-xs font-bold uppercase tracking-widest font-mono text-slate-400 mb-4">Activity Timeline</h3>
-            <div className="space-y-4 max-h-[340px] overflow-y-auto pr-1 -mr-1">
+            <div className="space-y-4">
               {recentTransactions.length === 0 ? (
                 <p className="text-xs text-slate-500 font-mono py-4">No activity yet. Do a roundup to get started.</p>
               ) : (
-                recentTransactions.slice(0, 10).map((item, idx) => (
+                recentTransactions.slice(0, 4).map((item, idx) => (
                   <div key={item.id} className="flex gap-3 text-xs">
                     <div className="flex flex-col items-center">
                       <div className="w-2.5 h-2.5 rounded-full bg-gold-500 shadow-md shadow-gold-500/20" />
-                      {idx < Math.min(9, recentTransactions.length - 1) && <div className="w-[1px] bg-gold-500/10 flex-grow my-1" />}
+                      {idx < Math.min(3, recentTransactions.length - 1) && <div className="w-[1px] bg-gold-500/10 flex-grow my-1" />}
                     </div>
                     <div>
                       <p className="text-slate-500 font-mono text-[10px]">{item.timestamp}</p>

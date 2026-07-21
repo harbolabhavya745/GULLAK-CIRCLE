@@ -8,6 +8,7 @@ interface NavbarProps {
   onOpenNotifications: () => void;
   onNavigate: (page: string) => void;
   profile?: any;
+  circleName?: string;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -16,7 +17,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   notificationCount,
   onOpenNotifications,
   onNavigate,
-  profile
+  profile,
+  circleName
 }) => {
   const firstName = profile?.name ? profile.name.split(" ")[0] : "Member";
   const avatarUrl = profile?.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(profile?.name || "U")}`;
@@ -26,7 +28,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       case "dashboard":
         return "Dashboard";
       case "circle":
-        return "Circle details";
+        return circleName || "Circle details";
       case "simulator":
         return "Roundup Simulator";
       case "submit-claim":

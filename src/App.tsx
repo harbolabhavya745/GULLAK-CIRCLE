@@ -8,6 +8,7 @@ import {
   submitClaimWithAiCheck,
   uploadClaimReceipt,
   updateMilestone,
+  updateCircleName,
   fetchMyCircleId,
   createCircle,
   joinCircleByInviteCode,
@@ -59,6 +60,7 @@ export default function App() {
   const [poolBalance, setPoolBalance] = useState<number>(0);
   const [milestoneTarget, setMilestoneTarget] = useState<number>(30000);
   const [circleCreatedAt, setCircleCreatedAt] = useState<string | undefined>(undefined);
+  const [circleName, setCircleName] = useState<string>("Gullak Circle");
   const [members, setMembers] = useState<Member[]>([]);
   const membersRef = useRef<Member[]>([]);
   useEffect(() => {
@@ -161,6 +163,7 @@ export default function App() {
       setPoolBalance(Number(circle.pool_balance ?? 0));
       setMilestoneTarget(Number(circle.milestone_target ?? 30000));
       setCircleCreatedAt(circle.created_at);
+      setCircleName(circle.name ?? "Gullak Circle");
       setMembers(memberList);
       setTransactions(txList);
       setClaims(claimList);
@@ -568,6 +571,26 @@ export default function App() {
     }
   };
 
+  // 4e. Update circle name (editable from Circle Details)
+  const [circleNameUpdateError, setCircleNameUpdateError] = useState("");
+  const handleUpdateCircleName = async (newName: string) => {
+    if (!activeCircleId) return;
+    setCircleNameUpdateError("");
+    const prevName = circleName;
+    setCircleName(newName); // optimistic update
+    try {
+      const trimmed = await updateCircleName(activeCircleId, newName);
+      setCircleName(trimmed);
+      showToast("Circle name updated.", "success");
+    } catch (err: any) {
+      console.error("Failed to update circle name", err);
+      setCircleName(prevName); // roll back
+      const message = err?.message || "Couldn't update the circle name. Please try again.";
+      setCircleNameUpdateError(message);
+      showToast(message, "error");
+    }
+  };
+
   // 5. Notifications (kept client-side only — there's no notifications table in the DB)
   const handleClearNotifications = () => setNotifications([]);
   const handleMarkNotificationsRead = () =>
@@ -582,6 +605,7 @@ export default function App() {
       case "dashboard":
         return (
           <DashboardPage
+            circleName={circleName}
             poolBalance={poolBalance}
             members={members}
             recentTransactions={transactions}
@@ -596,6 +620,9 @@ export default function App() {
       case "circle":
         return (
           <CircleDetailsPage
+            circleName={circleName}
+            onUpdateCircleName={handleUpdateCircleName}
+            circleNameUpdateError={circleNameUpdateError}
             poolBalance={poolBalance}
             members={members}
             recentTransactions={transactions}
@@ -640,6 +667,7 @@ export default function App() {
             claims={claims}
             poolBalance={poolBalance}
             profile={currentProfile}
+            myMember={members.find((m) => m.id === currentUser?.id)}
             email={currentUser?.email}
             myTransactions={transactions.filter((t) => t.userId === currentUser?.id)}
             memberCount={members.length}
@@ -654,6 +682,7 @@ export default function App() {
       default:
         return (
           <DashboardPage
+            circleName={circleName}
             poolBalance={poolBalance}
             members={members}
             recentTransactions={transactions}
@@ -719,6 +748,7 @@ export default function App() {
           onOpenNotifications={() => setNotificationPanelOpen(true)}
           onNavigate={setActivePage}
           profile={currentProfile}
+          circleName={circleName}
         />
         <main className="flex-1 p-6 max-w-7xl w-full mx-auto">
           <AnimatePresence mode="wait">
