@@ -269,15 +269,15 @@ export const CircleDetailsPage: React.FC<CircleDetailsPageProps> = ({
           {/* Recent Group activity Timeline */}
           <div className="p-6 rounded-3xl bg-matte-charcoal border border-gold-500/10 shadow-sm">
             <h3 className="text-xs font-bold uppercase tracking-widest font-mono text-slate-400 mb-4">Activity Timeline</h3>
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[420px] overflow-y-auto pr-1 custom-scrollbar">
               {recentTransactions.length === 0 ? (
                 <p className="text-xs text-slate-500 font-mono py-4">No activity yet. Do a roundup to get started.</p>
               ) : (
-                recentTransactions.slice(0, 4).map((item, idx) => (
+                recentTransactions.map((item, idx) => (
                   <div key={item.id} className="flex gap-3 text-xs">
                     <div className="flex flex-col items-center">
                       <div className="w-2.5 h-2.5 rounded-full bg-gold-500 shadow-md shadow-gold-500/20" />
-                      {idx < Math.min(3, recentTransactions.length - 1) && <div className="w-[1px] bg-gold-500/10 flex-grow my-1" />}
+                      {idx < recentTransactions.length - 1 && <div className="w-[1px] bg-gold-500/10 flex-grow my-1" />}
                     </div>
                     <div>
                       <p className="text-slate-500 font-mono text-[10px]">{item.timestamp}</p>

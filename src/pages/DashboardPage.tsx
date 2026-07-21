@@ -451,7 +451,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 <p className="text-xs text-slate-500">No pending emergency claims require review.</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-4 max-h-[420px] overflow-y-auto pr-1 custom-scrollbar">
                 {pendingClaims.map((claim) => (
                   <div
                     key={claim.id}
