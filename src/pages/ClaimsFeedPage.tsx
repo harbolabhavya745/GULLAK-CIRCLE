@@ -29,6 +29,7 @@ interface ClaimsFeedPageProps {
   onRejectClaim: (claimId: string) => void;
   triggerConfetti: () => void;
   poolBalance: number;
+  onViewMember?: (id: string, name: string, avatar: string) => void;
 }
 
 export const ClaimsFeedPage: React.FC<ClaimsFeedPageProps> = ({
@@ -39,7 +40,8 @@ export const ClaimsFeedPage: React.FC<ClaimsFeedPageProps> = ({
   onExecutePayout,
   onRejectClaim,
   triggerConfetti,
-  poolBalance
+  poolBalance,
+  onViewMember
 }) => {
   const [activeTab, setActiveTab] = useState<"Pending" | "Approved" | "Rejected">("Pending");
   const [payoutModalClaim, setPayoutModalClaim] = useState<Claim | null>(null);
@@ -171,12 +173,19 @@ export const ClaimsFeedPage: React.FC<ClaimsFeedPageProps> = ({
                 {/* Top header line */}
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <img
-                      src={claim.claimantAvatar}
-                      alt={claim.claimantName}
-                      referrerPolicy="no-referrer"
-                      className="w-10 h-10 rounded-xl object-cover border border-gold-500/15"
-                    />
+                    <button
+                      type="button"
+                      onClick={() => onViewMember?.(claim.claimantId, claim.claimantName, claim.claimantAvatar)}
+                      aria-label={`View ${claim.claimantName}'s profile`}
+                      className={`block rounded-xl flex-shrink-0 ${onViewMember ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
+                    >
+                      <img
+                        src={claim.claimantAvatar}
+                        alt={claim.claimantName}
+                        referrerPolicy="no-referrer"
+                        className="w-10 h-10 rounded-xl object-cover border border-gold-500/15"
+                      />
+                    </button>
                     <div>
                       <h4 className="text-sm font-bold text-slate-200">{claim.claimantName}</h4>
                       <p className="text-[10px] text-slate-500 font-mono flex items-center gap-1">

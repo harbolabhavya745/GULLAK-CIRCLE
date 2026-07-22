@@ -32,6 +32,7 @@ interface CircleDetailsPageProps {
   circleCreatedAt?: string;
   inviteCode?: string;
   currentUserId?: string;
+  onViewMember?: (id: string, name: string, avatar: string) => void;
 }
 
 export const CircleDetailsPage: React.FC<CircleDetailsPageProps> = ({
@@ -44,7 +45,8 @@ export const CircleDetailsPage: React.FC<CircleDetailsPageProps> = ({
   claims = [],
   circleCreatedAt,
   inviteCode,
-  currentUserId
+  currentUserId,
+  onViewMember
 }) => {
   const [copied, setCopied] = useState(false);
 
@@ -295,7 +297,7 @@ export const CircleDetailsPage: React.FC<CircleDetailsPageProps> = ({
 
         {/* Right 2 Columns: Interactive Leaderboard */}
         <div className="lg:col-span-2">
-          <LeaderboardPage members={members} currentUserId={currentUserId} />
+          <LeaderboardPage members={members} currentUserId={currentUserId} onViewMember={onViewMember} />
         </div>
 
       </div>

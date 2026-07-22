@@ -6,6 +6,7 @@ import { Member } from "../types";
 interface LeaderboardPageProps {
   members: Member[];
   currentUserId?: string;
+  onViewMember?: (id: string, name: string, avatar: string) => void;
 }
 
 const RANK_STYLES = [
@@ -14,7 +15,7 @@ const RANK_STYLES = [
   { ring: "ring-2 ring-amber-700/50", badge: "bg-amber-700 text-white", icon: Medal },
 ];
 
-export const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ members, currentUserId }) => {
+export const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ members, currentUserId, onViewMember }) => {
   const ranked = useMemo(() => {
     return [...members].sort((a, b) =>
       b.score - a.score || b.totalContributed - a.totalContributed
@@ -66,12 +67,19 @@ export const LeaderboardPage: React.FC<LeaderboardPageProps> = ({ members, curre
                   </div>
 
                   <div className="relative">
-                    <img
-                      src={member.avatar}
-                      alt={member.name}
-                      referrerPolicy="no-referrer"
-                      className={`w-11 h-11 rounded-2xl object-cover border border-gold-500/10 ${rankStyle ? rankStyle.ring : ""}`}
-                    />
+                    <button
+                      type="button"
+                      onClick={() => onViewMember?.(member.id, member.name, member.avatar)}
+                      aria-label={`View ${member.name}'s profile`}
+                      className={`block rounded-2xl ${onViewMember ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
+                    >
+                      <img
+                        src={member.avatar}
+                        alt={member.name}
+                        referrerPolicy="no-referrer"
+                        className={`w-11 h-11 rounded-2xl object-cover border border-gold-500/10 ${rankStyle ? rankStyle.ring : ""}`}
+                      />
+                    </button>
                   </div>
 
                   <div>

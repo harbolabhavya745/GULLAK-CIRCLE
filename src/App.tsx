@@ -30,6 +30,7 @@ import { ClaimsFeedPage } from "./pages/ClaimsFeedPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { Sidebar } from "./components/Sidebar";
 import { Navbar } from "./components/Navbar";
+import { MemberProfileModal } from "./components/MemberProfileModal";
 import { NotificationPanel } from "./components/NotificationPanel";
 import { ConfettiEffect } from "./components/ConfettiEffect";
 import { ToastContainer, ToastItem, ToastType } from "./components/Toast";
@@ -57,10 +58,19 @@ export default function App() {
   const [notificationPanelOpen, setNotificationPanelOpen] = useState<boolean>(false);
   const [confettiTrigger, setConfettiTrigger] = useState<boolean>(false);
 
+  // Whichever member's avatar was last clicked (leaderboard, claims feed,
+  // member lists, etc.) — drives the MemberProfileModal popup.
+  const [viewedMember, setViewedMember] = useState<{ id: string; name: string; avatar: string } | null>(null);
+  const handleViewMember = useCallback((id: string, name: string, avatar: string) => {
+    setViewedMember({ id, name, avatar });
+  }, []);
+  const closeViewedMember = useCallback(() => setViewedMember(null), []);
+
   const [poolBalance, setPoolBalance] = useState<number>(0);
   const [milestoneTarget, setMilestoneTarget] = useState<number>(30000);
   const [circleCreatedAt, setCircleCreatedAt] = useState<string | undefined>(undefined);
   const [circleName, setCircleName] = useState<string>("Gullak Circle");
+  const [circleInviteCode, setCircleInviteCode] = useState<string | undefined>(undefined);
   const [members, setMembers] = useState<Member[]>([]);
   const membersRef = useRef<Member[]>([]);
   useEffect(() => {
@@ -164,6 +174,7 @@ export default function App() {
       setMilestoneTarget(Number(circle.milestone_target ?? 30000));
       setCircleCreatedAt(circle.created_at);
       setCircleName(circle.name ?? "Gullak Circle");
+      setCircleInviteCode(circle.invite_code ?? undefined);
       setMembers(memberList);
       setTransactions(txList);
       setClaims(claimList);
@@ -615,6 +626,7 @@ export default function App() {
             milestoneTarget={milestoneTarget}
             onUpdateMilestone={handleUpdateMilestone}
             milestoneUpdateError={milestoneUpdateError}
+            onViewMember={handleViewMember}
           />
         );
       case "circle":
@@ -629,6 +641,8 @@ export default function App() {
             claims={claims}
             circleCreatedAt={circleCreatedAt}
             currentUserId={currentUser?.id}
+            onViewMember={handleViewMember}
+            inviteCode={circleInviteCode}
           />
         );
       case "simulator":
@@ -659,6 +673,7 @@ export default function App() {
             onRejectClaim={handleRejectClaim}
             triggerConfetti={handleTriggerConfetti}
             poolBalance={poolBalance}
+            onViewMember={handleViewMember}
           />
         );
       case "profile":
@@ -692,6 +707,7 @@ export default function App() {
             milestoneTarget={milestoneTarget}
             onUpdateMilestone={handleUpdateMilestone}
             milestoneUpdateError={milestoneUpdateError}
+            onViewMember={handleViewMember}
           />
         );
     }
@@ -771,6 +787,19 @@ export default function App() {
           onMarkAllRead={handleMarkNotificationsRead}
         />
       </div>
+      <MemberProfileModal
+        isOpen={!!viewedMember}
+        member={viewedMember ? members.find((m) => m.id === viewedMember.id) : null}
+        fallbackName={viewedMember?.name}
+        fallbackAvatar={viewedMember?.avatar}
+        isCurrentUser={!!viewedMember && viewedMember.id === currentUser?.id}
+        claims={claims}
+        onClose={closeViewedMember}
+        onViewFullProfile={() => {
+          closeViewedMember();
+          setActivePage("profile");
+        }}
+      />
     </div>
   );
 }

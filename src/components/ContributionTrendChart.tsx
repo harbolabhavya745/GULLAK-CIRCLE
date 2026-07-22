@@ -126,7 +126,7 @@ export const ContributionTrendChart: React.FC<ContributionTrendChartProps> = ({
               {memberKeys.map((name, idx) => (
                 <Line
                   key={name}
-                  type="monotone"
+                  type="linear"
                   dataKey={name}
                   stroke={LINE_COLORS[idx % LINE_COLORS.length]}
                   strokeWidth={2.5}

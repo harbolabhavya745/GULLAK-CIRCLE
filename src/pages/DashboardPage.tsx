@@ -32,6 +32,7 @@ interface DashboardPageProps {
   milestoneTarget: number;
   onUpdateMilestone: (newTarget: number) => Promise<void> | void;
   milestoneUpdateError?: string;
+  onViewMember?: (id: string, name: string, avatar: string) => void;
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({
@@ -44,7 +45,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   onNavigate,
   milestoneTarget,
   onUpdateMilestone,
-  milestoneUpdateError = ""
+  milestoneUpdateError = "",
+  onViewMember
 }) => {
   // Simple calculated metrics
   const milestoneProgress = Math.min((poolBalance / milestoneTarget) * 100, 100);
@@ -543,9 +545,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
               <div className="p-3 space-y-1.5 overflow-y-auto">
                 {members.map((m) => (
-                  <div
+                  <button
+                    type="button"
                     key={m.id}
-                    className="flex items-center gap-3 p-3 rounded-2xl hover:bg-gold-500/5 transition-colors"
+                    onClick={() => onViewMember?.(m.id, m.name, m.avatar)}
+                    className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-gold-500/5 transition-colors text-left cursor-pointer"
                   >
                     <img
                       src={m.avatar}
@@ -575,7 +579,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                       </div>
                       <p className="text-[9px] text-slate-500 uppercase tracking-wider font-mono">Trust Score</p>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             </motion.div>
