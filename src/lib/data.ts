@@ -267,7 +267,12 @@ export async function fetchTransactions(circleId: string): Promise<Transaction[]
     .select("*")
     .eq("circle_id", circleId)
     .order("created_at", { ascending: false })
-    .limit(50);
+    // A generous cap, not a tight rolling window — the Contribution Trends chart
+    // and the weekly/monthly dashboard stats bucket this list by date, so a
+    // small limit (e.g. 50) makes older days silently vanish as new
+    // transactions push them past the cutoff. 1000 comfortably covers a
+    // friends-and-family circle's history while still bounding the query.
+    .limit(1000);
   if (error) throw error;
 
   return (data ?? []).map((t: any) => ({

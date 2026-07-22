@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -17,6 +17,8 @@ interface ContributionTrendChartProps {
   transactions: Transaction[];
 }
 
+type ViewMode = "daily" | "weekly" | "monthly";
+
 // A vivid, high-contrast palette — cycles if there are more members than colors.
 const LINE_COLORS = [
   "#22D3EE", // cyan
@@ -31,10 +33,51 @@ const LINE_COLORS = [
   "#2DD4BF", // teal
 ];
 
+const VIEW_OPTIONS: { value: ViewMode; label: string }[] = [
+  { value: "daily", label: "Daily" },
+  { value: "weekly", label: "Weekly" },
+  { value: "monthly", label: "Monthly" },
+];
+
+// Monday-start of the calendar week containing `date`.
+function startOfWeek(date: Date): Date {
+  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const day = d.getDay(); // 0 = Sun ... 6 = Sat
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diffToMonday);
+  return d;
+}
+
+// Returns a stable sort key + a human label for the bucket a transaction date falls into.
+function getBucket(date: Date, viewMode: ViewMode): { key: string; label: string; sortValue: number } {
+  if (viewMode === "monthly") {
+    const key = `${date.getFullYear()}-${date.getMonth()}`;
+    const label = date.toLocaleDateString("en-IN", { month: "short", year: "2-digit" });
+    return { key, label, sortValue: date.getFullYear() * 12 + date.getMonth() };
+  }
+  if (viewMode === "weekly") {
+    const start = startOfWeek(date);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    const key = start.toISOString().slice(0, 10);
+    const label = `${start.toLocaleDateString("en-IN", { day: "2-digit", month: "short" })} – ${end.toLocaleDateString(
+      "en-IN",
+      { day: "2-digit", month: "short" }
+    )}`;
+    return { key, label, sortValue: start.getTime() };
+  }
+  // daily
+  const key = date.toDateString();
+  const label = date.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
+  return { key, label, sortValue: new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime() };
+}
+
 export const ContributionTrendChart: React.FC<ContributionTrendChartProps> = ({
   members,
   transactions,
 }) => {
+  const [viewMode, setViewMode] = useState<ViewMode>("daily");
+
   const { chartData, memberKeys } = useMemo(() => {
     // Only transactions we can attribute to a member and place on a timeline.
     const usable = transactions.filter((t) => t.userId && t.createdAt);
@@ -48,47 +91,67 @@ export const ContributionTrendChart: React.FC<ContributionTrendChartProps> = ({
       (a, b) => new Date(a.createdAt!).getTime() - new Date(b.createdAt!).getTime()
     );
 
-    // Group into per-day buckets, tracking each member's contribution that day.
-    const dayBuckets = new Map<string, Record<string, number>>();
+    // Group into buckets (day/week/month), tracking each member's contribution per bucket.
+    const buckets = new Map<string, { label: string; sortValue: number; totals: Record<string, number> }>();
     sorted.forEach((t) => {
-      const dateKey = new Date(t.createdAt!).toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-      });
-      if (!dayBuckets.has(dateKey)) dayBuckets.set(dateKey, {});
-      const bucket = dayBuckets.get(dateKey)!;
-      bucket[t.userId!] = (bucket[t.userId!] || 0) + t.roundup;
+      const { key, label, sortValue } = getBucket(new Date(t.createdAt!), viewMode);
+      if (!buckets.has(key)) buckets.set(key, { label, sortValue, totals: {} });
+      const bucket = buckets.get(key)!;
+      bucket.totals[t.userId!] = (bucket.totals[t.userId!] || 0) + t.roundup;
     });
 
-    // Build a running cumulative total per member across days, so lines trend upward.
+    // Sort buckets chronologically (not alphabetically by label).
+    const orderedBuckets = Array.from(buckets.values()).sort((a, b) => a.sortValue - b.sortValue);
+
+    // Build a running cumulative total per member across buckets, so lines trend upward.
     const runningTotals: Record<string, number> = {};
     members.forEach((m) => (runningTotals[m.id] = 0));
 
-    const data = Array.from(dayBuckets.entries()).map(([date, bucket]) => {
-      const row: Record<string, number | string> = { date };
+    const data = orderedBuckets.map(({ label, totals }) => {
+      const row: Record<string, number | string> = { date: label };
       members.forEach((m) => {
-        runningTotals[m.id] += bucket[m.id] || 0;
+        runningTotals[m.id] += totals[m.id] || 0;
         row[m.name] = Number(runningTotals[m.id].toFixed(2));
       });
       return row;
     });
 
     return { chartData: data, memberKeys: members.map((m) => m.name) };
-  }, [members, transactions]);
+  }, [members, transactions, viewMode]);
 
   const hasData = chartData.length > 0;
 
   return (
     <div className="p-6 rounded-3xl bg-matte-charcoal border border-gold-500/10 shadow-sm">
-      <div className="flex items-center gap-2.5 mb-1">
-        <div className="p-2 bg-gold-500/10 rounded-xl text-gold-500 border border-gold-500/20">
-          <TrendingUp className="w-4 h-4" />
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-1">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 bg-gold-500/10 rounded-xl text-gold-500 border border-gold-500/20">
+            <TrendingUp className="w-4 h-4" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-slate-100">Contribution Trends</h3>
+            <p className="text-[11px] text-slate-500 font-mono">
+              Cumulative roundups per member over time
+            </p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-sm font-bold text-slate-100">Contribution Trends</h3>
-          <p className="text-[11px] text-slate-500 font-mono">
-            Cumulative roundups per member over time
-          </p>
+
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-matte-black/50 border border-gold-500/10">
+          {VIEW_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setViewMode(opt.value)}
+              aria-pressed={viewMode === opt.value}
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold font-mono uppercase tracking-wide transition-colors cursor-pointer ${
+                viewMode === opt.value
+                  ? "bg-gold-500 text-matte-black"
+                  : "text-slate-400 hover:text-gold-500"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -145,3 +208,4 @@ export const ContributionTrendChart: React.FC<ContributionTrendChartProps> = ({
     </div>
   );
 };
+
