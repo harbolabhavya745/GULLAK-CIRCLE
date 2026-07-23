@@ -13,7 +13,8 @@ import {
   Eye, 
   EyeOff,
   Info,
-  Chrome
+  Chrome,
+  Landmark
 } from "lucide-react";
 
 interface LoginPageProps {
@@ -32,6 +33,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLaunch }) => {
   const [isSignup, setIsSignup] = useState(false)
   const [needsEmailConfirm, setNeedsEmailConfirm] = useState(false)
   const [oauthLoading, setOauthLoading] = useState<"google" | null>(null)
+  const [isConnectingBank, setIsConnectingBank] = useState(false)
+
+  const handleConnectBank = async () => {
+    if (isConnectingBank) return
+    setIsConnectingBank(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/aa-consent`,
+        { headers: { Authorization: `Bearer ${session?.access_token}` } }
+      )
+      const { url, error } = await res.json()
+      if (error || !url) throw new Error(error ?? "No consent URL returned")
+      window.location.href = url // redirect to Setu's hosted AA consent screen
+    } catch (err) {
+      console.error("Failed to start AA consent:", err)
+      setIsConnectingBank(false)
+    }
+  }
 
   const resetFormState = () => {
     setError("")
@@ -60,7 +80,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLaunch }) => {
     setIsLoading(false)
   } else {
     setIsSuccess(true)
-    setTimeout(() => onLaunch(), 800)
   }
 }
 const handleSignup = async (e: React.FormEvent) => {
@@ -91,7 +110,6 @@ const handleSignup = async (e: React.FormEvent) => {
     setNeedsEmailConfirm(true)
   } else {
     setIsSuccess(true)
-    setTimeout(() => onLaunch(), 800)
   }
 }
 
@@ -210,8 +228,31 @@ const handleOAuthLogin = async (provider: "google") => {
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-slate-100">Authentication Confirmed</h3>
-                    <p className="text-xs text-slate-400 mt-1">Decrypting your circular vault...</p>
+                    <p className="text-xs text-slate-400 mt-1">One last thing before you enter your vault.</p>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={handleConnectBank}
+                    disabled={isConnectingBank}
+                    className="w-full py-3.5 bg-gold-500 hover:bg-gold-400 text-matte-black font-bold rounded-2xl transition-all duration-300 text-xs font-mono uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-gold-500/10 cursor-pointer disabled:opacity-50"
+                  >
+                    {isConnectingBank ? (
+                      <div className="w-4 h-4 border-2 border-matte-black border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Landmark className="w-4 h-4" /> Connect Bank Account
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onLaunch}
+                    disabled={isConnectingBank}
+                    className="text-xs font-mono text-slate-500 hover:text-slate-300 uppercase tracking-widest transition-colors disabled:opacity-50"
+                  >
+                    Skip for now
+                  </button>
                 </motion.div>
               ) : isBiometricAuthenticating ? (
                 <motion.div 
