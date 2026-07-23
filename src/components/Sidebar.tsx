@@ -4,7 +4,6 @@ import {
   Coins, 
   LayoutDashboard, 
   Users, 
-  Activity, 
   PlusCircle, 
   CheckSquare, 
   User, 
@@ -30,7 +29,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "circle", label: "Circle details", icon: Users },
-    { id: "simulator", label: "Roundup Simulator", icon: Activity },
     { id: "submit-claim", label: "Submit claim", icon: PlusCircle },
     { id: "claims", label: "Claims feed", icon: CheckSquare },
     { id: "profile", label: "Your Profile", icon: User },

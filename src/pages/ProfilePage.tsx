@@ -424,7 +424,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ claims, poolBalance, p
 
         {myTransactions.length === 0 ? (
           <p className="text-xs text-slate-500 font-mono text-center py-6">
-            No roundups yet — head to the Roundup Simulator to make your first one.
+            No roundups yet — spare change will show up here as your circle spends.
           </p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

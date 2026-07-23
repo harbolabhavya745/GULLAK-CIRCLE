@@ -434,17 +434,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
           {/* Recent Activity / Spare-Change Roundups */}
           <div className="p-6 rounded-3xl bg-matte-charcoal border border-gold-500/10 shadow-lg shadow-black/30">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-base font-bold text-slate-100">Live Rounded-up Spare Change</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Micro-savings automatically deposited into the pool</p>
-              </div>
-              <button 
-                onClick={() => onNavigate("simulator")}
-                className="text-xs font-semibold text-gold-500 hover:text-gold-400 flex items-center gap-1 hover:underline cursor-pointer font-mono uppercase tracking-wider"
-              >
-                Go to Simulator <ChevronRight className="w-3.5 h-3.5" />
-              </button>
+            <div className="mb-6">
+              <h3 className="text-base font-bold text-slate-100">Live Rounded-up Spare Change</h3>
+              <p className="text-xs text-slate-500 mt-0.5">Micro-savings automatically deposited into the pool</p>
             </div>
 
             <div className="space-y-4">

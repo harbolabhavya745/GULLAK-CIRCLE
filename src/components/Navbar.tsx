@@ -29,8 +29,6 @@ export const Navbar: React.FC<NavbarProps> = ({
         return "Dashboard";
       case "circle":
         return circleName || "Circle details";
-      case "simulator":
-        return "Roundup Simulator";
       case "submit-claim":
         return "Submit claim";
       case "claims":

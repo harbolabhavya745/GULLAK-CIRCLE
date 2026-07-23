@@ -24,7 +24,6 @@ import { LoginPage } from "./pages/LoginPage";
 import { CircleSetupPage } from "./pages/CircleSetupPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { CircleDetailsPage } from "./pages/CircleDetailsPage";
-import { RoundupSimulatorPage } from "./pages/RoundupSimulatorPage";
 import { ClaimSubmissionPage } from "./pages/ClaimSubmissionPage";
 import { ClaimsFeedPage } from "./pages/ClaimsFeedPage";
 import { ProfilePage } from "./pages/ProfilePage";
@@ -643,16 +642,6 @@ export default function App() {
             currentUserId={currentUser?.id}
             onViewMember={handleViewMember}
             inviteCode={circleInviteCode}
-          />
-        );
-      case "simulator":
-        return (
-          <RoundupSimulatorPage
-            poolBalance={poolBalance}
-            recentTransactions={transactions}
-            onSimulateRoundup={handleSimulateRoundup}
-            triggerConfetti={handleTriggerConfetti}
-            milestoneTarget={milestoneTarget}
           />
         );
       case "submit-claim":
