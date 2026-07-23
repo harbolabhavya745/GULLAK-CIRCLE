@@ -49,13 +49,40 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   onViewMember
 }) => {
   // Simple calculated metrics
-  const milestoneProgress = Math.min((poolBalance / milestoneTarget) * 100, 100);
+  // Pool Level = how many whole times the pool balance has cleared the target
+  // milestone (1x target = Level 1, 2x target = Level 2, and so on).
+  const poolLevel = milestoneTarget > 0 ? Math.floor(poolBalance / milestoneTarget) : 0;
+  // Progress bar tracks movement toward the *next* level, not just the first target,
+  // so it doesn't stay pinned at 100% forever after the first milestone is hit.
+  const milestoneProgress = milestoneTarget > 0
+    ? Math.min(((poolBalance % milestoneTarget) / milestoneTarget) * 100, 100)
+    : 0;
 
   const [isEditingMilestone, setIsEditingMilestone] = React.useState(false);
   const [showMembersModal, setShowMembersModal] = React.useState(false);
   const [milestoneInput, setMilestoneInput] = React.useState(String(milestoneTarget));
   const [isSavingMilestone, setIsSavingMilestone] = React.useState(false);
   const [milestoneError, setMilestoneError] = React.useState("");
+
+  // "New Achievement Unlocked" banner — fires whenever poolLevel ticks up.
+  const [unlockedLevel, setUnlockedLevel] = React.useState<number | null>(null);
+  const prevLevelRef = React.useRef<number | null>(null);
+
+  React.useEffect(() => {
+    if (prevLevelRef.current === null) {
+      // First render: just record the starting level, don't celebrate
+      // levels the circle had already reached before this page loaded.
+      prevLevelRef.current = poolLevel;
+      return;
+    }
+    if (poolLevel > prevLevelRef.current) {
+      setUnlockedLevel(poolLevel);
+      const timer = setTimeout(() => setUnlockedLevel(null), 5000);
+      prevLevelRef.current = poolLevel;
+      return () => clearTimeout(timer);
+    }
+    prevLevelRef.current = poolLevel;
+  }, [poolLevel]);
 
   const startEditingMilestone = () => {
     setMilestoneInput(String(milestoneTarget));
@@ -131,29 +158,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         <div className="absolute top-0 right-0 w-80 h-80 bg-gold-500/5 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
 
-        <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-          <div className="md:col-span-2 space-y-2">
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-100">
-              Welcome back to {circleName}!
-            </h2>
-            <p className="text-slate-400 text-sm max-w-xl leading-relaxed">
-              You saved ₹{savedThisWeek.toFixed(2)} this week from spare roundups. Your circle is fully secure, and {pendingClaims.length} pending claim{pendingClaims.length === 1 ? "" : "s"} await review.
-            </p>
-          </div>
-          <div className="flex md:justify-end gap-3">
-            <button
-              onClick={() => onNavigate("simulator")}
-              className="px-5 py-3 bg-gold-500 hover:bg-gold-400 text-matte-black font-bold rounded-xl shadow-lg shadow-gold-500/20 transition-all text-xs uppercase tracking-wider cursor-pointer"
-            >
-              Simulate Roundup
-            </button>
-            <button
-              onClick={() => onNavigate("submit-claim")}
-              className="px-5 py-3 bg-matte-charcoal hover:bg-matte-black text-gold-500 font-bold rounded-xl shadow-md border border-gold-500/30 transition-all text-xs uppercase tracking-wider cursor-pointer"
-            >
-              Request Aid
-            </button>
-          </div>
+        <div className="relative z-10 space-y-2">
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-100">
+            Welcome back to {circleName}!
+          </h2>
+          <p className="text-slate-400 text-sm max-w-xl leading-relaxed">
+            You saved ₹{savedThisWeek.toFixed(2)} this week from spare roundups. Your circle is fully secure, and {pendingClaims.length} pending claim{pendingClaims.length === 1 ? "" : "s"} await review.
+          </p>
         </div>
       </motion.div>
 
@@ -193,9 +204,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         >
           <div className="absolute top-0 right-0 w-24 h-24 bg-gold-500/5 rounded-full blur-xl" />
           <div className="flex items-center justify-between mb-4">
-            <span className="text-xs font-mono text-slate-400 uppercase tracking-widest font-semibold">
-              Next Circle Milestone
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono text-slate-400 uppercase tracking-widest font-semibold">
+                Next Circle Milestone
+              </span>
+              {poolLevel > 0 && (
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-gold-500/10 border border-gold-500/25 text-gold-500 text-[10px] font-bold uppercase tracking-wider">
+                  <Award className="w-3 h-3" />
+                  Level {poolLevel}
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               {!isEditingMilestone && (
                 <button
@@ -212,6 +231,28 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               </div>
             </div>
           </div>
+
+          <AnimatePresence>
+            {unlockedLevel !== null && (
+              <motion.div
+                initial={{ opacity: 0, y: -8, height: 0 }}
+                animate={{ opacity: 1, y: 0, height: "auto" }}
+                exit={{ opacity: 0, y: -8, height: 0 }}
+                transition={{ duration: 0.3 }}
+                className="mb-3 overflow-hidden"
+              >
+                <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-gold-500/10 border border-gold-500/30">
+                  <span className="shrink-0 w-8 h-8 rounded-full bg-gold-500/15 text-gold-500 flex items-center justify-center">
+                    <Award className="w-4 h-4" />
+                  </span>
+                  <div className="leading-tight">
+                    <p className="text-xs font-bold text-gold-500">New Achievement Unlocked!</p>
+                    <p className="text-[11px] text-slate-400">Circle reached Pool Level {unlockedLevel}</p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {isEditingMilestone ? (
             <div className="mb-2 space-y-2">
@@ -266,7 +307,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
           <div className="space-y-1.5">
             <div className="flex justify-between text-xs text-slate-500 font-mono">
-              <span>{milestoneProgress.toFixed(1)}% Reached</span>
+              <span>{milestoneProgress.toFixed(1)}% to Level {poolLevel + 1}</span>
               <span>₹{poolBalance.toLocaleString()}</span>
             </div>
             <div className="w-full h-1.5 bg-matte-black rounded-full overflow-hidden">
