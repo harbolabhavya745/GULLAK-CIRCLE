@@ -275,20 +275,23 @@ export const CircleDetailsPage: React.FC<CircleDetailsPageProps> = ({
               {recentTransactions.length === 0 ? (
                 <p className="text-xs text-slate-500 font-mono py-4">No activity yet. Do a roundup to get started.</p>
               ) : (
-                recentTransactions.map((item, idx) => (
-                  <div key={item.id} className="flex gap-3 text-xs">
-                    <div className="flex flex-col items-center">
-                      <div className="w-2.5 h-2.5 rounded-full bg-gold-500 shadow-md shadow-gold-500/20" />
-                      {idx < recentTransactions.length - 1 && <div className="w-[1px] bg-gold-500/10 flex-grow my-1" />}
+                recentTransactions.map((item, idx) => {
+                  const memberName = members.find((m) => m.id === item.userId)?.name ?? "A member";
+                  return (
+                    <div key={item.id} className="flex gap-3 text-xs">
+                      <div className="flex flex-col items-center">
+                        <div className="w-2.5 h-2.5 rounded-full bg-gold-500 shadow-md shadow-gold-500/20" />
+                        {idx < recentTransactions.length - 1 && <div className="w-[1px] bg-gold-500/10 flex-grow my-1" />}
+                      </div>
+                      <div>
+                        <p className="text-slate-500 font-mono text-[10px]">{item.timestamp}</p>
+                        <p className="text-slate-300 font-medium mt-0.5 leading-relaxed">
+                          {memberName} added a spare change roundup of ₹{item.roundup.toFixed(2)}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-slate-500 font-mono text-[10px]">{item.timestamp}</p>
-                      <p className="text-slate-300 font-medium mt-0.5 leading-relaxed">
-                        Spare change of ₹{item.roundup.toFixed(2)} rounded up from {item.merchant}
-                      </p>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
