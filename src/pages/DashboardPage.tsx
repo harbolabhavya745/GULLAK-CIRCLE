@@ -436,33 +436,59 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           <div className="p-6 rounded-3xl bg-matte-charcoal border border-gold-500/10 shadow-lg shadow-black/30">
             <div className="mb-6">
               <h3 className="text-base font-bold text-slate-100">Live Rounded-up Spare Change</h3>
-              <p className="text-xs text-slate-500 mt-0.5">Micro-savings automatically deposited into the pool</p>
+              <p className="text-xs text-slate-500 mt-0.5">Micro-savings automatically deposited into the pool today</p>
             </div>
 
-            <div className="space-y-4">
-              {recentTransactions.slice(0, 4).map((tx) => (
-                <div key={tx.id} className="p-4 rounded-2xl bg-matte-black border border-gold-500/5 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gold-500/10 text-gold-500 border border-gold-500/10 flex items-center justify-center font-bold text-xs">
-                      {tx.merchant.slice(0,2).toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-200">{tx.merchant}</p>
-                      <p className="text-xs text-slate-500 flex items-center gap-1.5 font-mono">
-                        <Clock className="w-3 h-3" /> {tx.timestamp}
-                      </p>
-                    </div>
-                  </div>
+            {(() => {
+              const now = new Date();
+              const todaysTransactions = recentTransactions.filter((tx) => {
+                if (!tx.createdAt) return false;
+                const txDate = new Date(tx.createdAt);
+                return (
+                  txDate.getFullYear() === now.getFullYear() &&
+                  txDate.getMonth() === now.getMonth() &&
+                  txDate.getDate() === now.getDate()
+                );
+              });
 
-                  <div className="text-right">
-                    <p className="text-sm font-mono text-slate-400">₹{tx.amount.toFixed(2)}</p>
-                    <p className="text-xs font-mono font-bold text-gold-500 flex items-center justify-end gap-1">
-                      Rounded +₹{tx.roundup.toFixed(2)}
-                    </p>
-                  </div>
+              if (todaysTransactions.length === 0) {
+                return (
+                  <p className="text-xs text-slate-500 font-mono text-center py-6">
+                    No spare change rounded up yet today.
+                  </p>
+                );
+              }
+
+              return (
+                <div className="space-y-4 max-h-[360px] overflow-y-auto pr-1">
+                  {todaysTransactions.map((tx) => {
+                    const memberName = members.find((m) => m.id === tx.userId)?.name ?? "A member";
+                    return (
+                      <div key={tx.id} className="p-4 rounded-2xl bg-matte-black border border-gold-500/5 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-gold-500/10 text-gold-500 border border-gold-500/10 flex items-center justify-center font-bold text-xs">
+                            {memberName.slice(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-slate-200">{memberName}</p>
+                            <p className="text-xs text-slate-500 flex items-center gap-1.5 font-mono">
+                              <Clock className="w-3 h-3" /> {tx.timestamp}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="text-right">
+                          <p className="text-sm font-mono text-slate-400">₹{tx.amount.toFixed(2)}</p>
+                          <p className="text-xs font-mono font-bold text-gold-500 flex items-center justify-end gap-1">
+                            Rounded +₹{tx.roundup.toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
+              );
+            })()}
           </div>
 
         </div>
