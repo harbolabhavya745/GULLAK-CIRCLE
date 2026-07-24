@@ -427,16 +427,18 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ claims, poolBalance, p
             No roundups yet — spare change will show up here as your circle spends.
           </p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {myTransactions.slice(0, 8).map((item) => (
-              <div key={item.id} className="flex justify-between items-center text-sm p-4 bg-matte-black rounded-2xl border border-gold-500/5 hover:border-gold-500/10 transition-colors">
-                <div>
-                  <p className="font-semibold text-slate-200">{item.merchant} swipe roundup</p>
-                  <p className="text-xs text-slate-400 font-mono mt-1">{item.timestamp}</p>
+          <div className="max-h-[420px] overflow-y-auto pr-2 -mr-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {myTransactions.map((item) => (
+                <div key={item.id} className="flex justify-between items-center text-sm p-4 bg-matte-black rounded-2xl border border-gold-500/5 hover:border-gold-500/10 transition-colors">
+                  <div>
+                    <p className="font-semibold text-slate-200">{item.merchant} swipe roundup</p>
+                    <p className="text-xs text-slate-400 font-mono mt-1">{item.timestamp}</p>
+                  </div>
+                  <span className="font-mono text-gold-500 font-bold text-base">+₹{item.roundup.toFixed(2)}</span>
                 </div>
-                <span className="font-mono text-gold-500 font-bold text-base">+₹{item.roundup.toFixed(2)}</span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
       </div>
