@@ -1,5 +1,5 @@
 import React from "react";
-import { Menu, Bell, Coins, Sparkles, User, ChevronDown } from "lucide-react";
+import { Menu, Bell, Coins, Sparkles, User, ChevronDown, Crown } from "lucide-react";
 
 interface NavbarProps {
   activePage: string;
@@ -9,6 +9,7 @@ interface NavbarProps {
   onNavigate: (page: string) => void;
   profile?: any;
   circleName?: string;
+  isPremium?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -18,7 +19,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenNotifications,
   onNavigate,
   profile,
-  circleName
+  circleName,
+  isPremium = false
 }) => {
   const firstName = profile?.name ? profile.name.split(" ")[0] : "Member";
   const avatarUrl = profile?.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(profile?.name || "U")}`;
@@ -35,6 +37,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         return "Claims feed";
       case "profile":
         return "Your Profile";
+      case "premium":
+        return "Premium";
       default:
         return "Gullak Circle";
     }
@@ -58,11 +62,25 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       <div className="flex items-center gap-4">
-        {/* Premium Real-time Status Badge */}
+        {/* Real-time Status Badge */}
         <div className="hidden sm:inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gold-500/5 text-gold-500 text-xs font-semibold border border-gold-500/25 shadow-[0_0_15px_rgba(212,175,55,0.06)]">
           <span className="w-1.5 h-1.5 rounded-full bg-gold-500 animate-pulse ring-2 ring-gold-500/30" /> 
           Active Protection
         </div>
+
+        {/* Premium subscription status / upgrade nudge */}
+        {isPremium ? (
+          <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gold-500 text-matte-black text-xs font-bold">
+            <Crown className="w-3.5 h-3.5" /> Premium
+          </span>
+        ) : (
+          <button
+            onClick={() => onNavigate("premium")}
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gold-500/30 text-gold-500 text-xs font-bold hover:bg-gold-500 hover:text-matte-black transition-colors cursor-pointer"
+          >
+            <Crown className="w-3.5 h-3.5" /> Upgrade
+          </button>
+        )}
 
         {/* Premium notification bell button */}
         <button

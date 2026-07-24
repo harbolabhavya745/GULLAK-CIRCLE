@@ -10,7 +10,8 @@ import {
   Menu, 
   X,
   LogOut,
-  Sparkles
+  Sparkles,
+  Crown
 } from "lucide-react";
 
 interface SidebarProps {
@@ -18,6 +19,7 @@ interface SidebarProps {
   onNavigate: (page: string) => void;
   isOpen: boolean;
   onClose: () => void;
+  isPremium?: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -25,6 +27,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onNavigate,
   isOpen,
   onClose,
+  isPremium = false,
 }) => {
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -100,6 +103,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
               );
             })}
           </nav>
+
+          {/* Premium upsell / status entry — visually distinct from the rest of the nav */}
+          <button
+            onClick={() => handleItemClick("premium")}
+            className={`w-full px-4 py-3 rounded-xl flex items-center gap-3 text-sm font-semibold tracking-normal transition-all cursor-pointer border ${
+              activePage === "premium"
+                ? "bg-gold-500 text-matte-black border-gold-500 shadow-lg shadow-gold-500/10"
+                : "bg-gradient-to-r from-gold-500/10 to-gold-500/5 text-gold-500 border-gold-500/25 hover:border-gold-500/50 hover:from-gold-500/15"
+            }`}
+          >
+            <Crown className={`w-4.5 h-4.5 ${activePage === "premium" ? "text-matte-black" : "text-gold-500"}`} />
+            <span className="flex-1 text-left">Premium</span>
+            {isPremium ? (
+              <span
+                className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                  activePage === "premium" ? "bg-matte-black/15 text-matte-black" : "bg-gold-500/15 text-gold-500 border border-gold-500/30"
+                }`}
+              >
+                Active
+              </span>
+            ) : (
+              <span
+                className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                  activePage === "premium" ? "bg-matte-black/15 text-matte-black" : "bg-gold-500/15 text-gold-500 border border-gold-500/30"
+                }`}
+              >
+                ₹49/mo
+              </span>
+            )}
+          </button>
 
         </div>
 

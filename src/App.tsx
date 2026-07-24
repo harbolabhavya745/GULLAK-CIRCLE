@@ -17,6 +17,8 @@ import {
   fetchTransactions,
   fetchClaims,
   computePoolStats,
+  upgradeToPremium,
+  cancelPremium,
 } from "./lib/data";
 import { Member, Transaction, Claim, NotificationItem } from "./types";
 
@@ -27,6 +29,7 @@ import { CircleDetailsPage } from "./pages/CircleDetailsPage";
 import { ClaimSubmissionPage } from "./pages/ClaimSubmissionPage";
 import { ClaimsFeedPage } from "./pages/ClaimsFeedPage";
 import { ProfilePage } from "./pages/ProfilePage";
+import { PremiumPage } from "./pages/PremiumPage";
 import { Sidebar } from "./components/Sidebar";
 import { Navbar } from "./components/Navbar";
 import { MemberProfileModal } from "./components/MemberProfileModal";
@@ -601,6 +604,22 @@ export default function App() {
     }
   };
 
+  // 4f. Premium plan (₹49/month) — upgrade / cancel
+  const handleUpgradeToPremium = async () => {
+    if (!currentUser) return;
+    const result = await upgradeToPremium(currentUser.id);
+    setCurrentProfile((prev: any) => (prev ? { ...prev, ...result } : prev));
+    handleTriggerConfetti();
+    showToast("Welcome to Premium! AI fraud detection, an ad-free experience, and more are now active.", "success");
+  };
+
+  const handleCancelPremium = async () => {
+    if (!currentUser) return;
+    await cancelPremium(currentUser.id);
+    setCurrentProfile((prev: any) => (prev ? { ...prev, is_premium: false, premium_plan: "none" } : prev));
+    showToast("Your Premium plan has been cancelled.", "info");
+  };
+
   // 5. Notifications (kept client-side only — there's no notifications table in the DB)
   const handleClearNotifications = () => setNotifications([]);
   const handleMarkNotificationsRead = () =>
@@ -663,6 +682,15 @@ export default function App() {
             triggerConfetti={handleTriggerConfetti}
             poolBalance={poolBalance}
             onViewMember={handleViewMember}
+          />
+        );
+      case "premium":
+        return (
+          <PremiumPage
+            isPremium={!!currentProfile?.is_premium}
+            premiumSince={currentProfile?.premium_since}
+            onUpgrade={handleUpgradeToPremium}
+            onCancel={handleCancelPremium}
           />
         );
       case "profile":
@@ -744,6 +772,7 @@ export default function App() {
         onNavigate={setActivePage}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        isPremium={!!currentProfile?.is_premium}
       />
       <div className="flex-1 flex flex-col lg:pl-72 min-h-screen overflow-x-hidden">
         <Navbar
@@ -754,6 +783,7 @@ export default function App() {
           onNavigate={setActivePage}
           profile={currentProfile}
           circleName={circleName}
+          isPremium={!!currentProfile?.is_premium}
         />
         <main className="flex-1 p-6 max-w-7xl w-full mx-auto">
           <AnimatePresence mode="wait">

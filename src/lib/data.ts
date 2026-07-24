@@ -113,6 +113,53 @@ export async function updateName(userId: string, name: string): Promise<string> 
   return trimmed;
 }
 
+// Monthly premium plan price, in rupees. Kept in one place so the UI and
+// the (future) payment gateway integration always agree on the amount.
+export const PREMIUM_PLAN_PRICE_INR = 49;
+
+// Activates the ₹49/month premium plan for a user.
+//
+// NOTE: there's no real payment gateway wired up yet (e.g. Razorpay), so
+// this just records the subscription and flips the flag on `profiles`
+// directly. Swap the body of this function for a call to your payment
+// gateway's checkout + webhook confirmation once billing is live — the
+// call site (PremiumPage) doesn't need to change.
+export async function upgradeToPremium(userId: string): Promise<{ is_premium: true; premium_since: string; premium_plan: "monthly" }> {
+  const now = new Date().toISOString();
+
+  const { error: subError } = await supabase.from("premium_subscriptions").insert({
+    user_id: userId,
+    status: "active",
+    amount: PREMIUM_PLAN_PRICE_INR,
+    currency: "INR",
+  });
+  if (subError) throw subError;
+
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .update({ is_premium: true, premium_since: now, premium_plan: "monthly" })
+    .eq("id", userId);
+  if (profileError) throw profileError;
+
+  return { is_premium: true, premium_since: now, premium_plan: "monthly" };
+}
+
+// Cancels the premium plan (keeps the record for history/analytics).
+export async function cancelPremium(userId: string): Promise<void> {
+  const { error: subError } = await supabase
+    .from("premium_subscriptions")
+    .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+    .eq("user_id", userId)
+    .eq("status", "active");
+  if (subError) throw subError;
+
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .update({ is_premium: false, premium_plan: "none" })
+    .eq("id", userId);
+  if (profileError) throw profileError;
+}
+
 export async function fetchMyCircleId(userId: string): Promise<string | null> {
   const { data, error } = await supabase
     .from("circle_members")
