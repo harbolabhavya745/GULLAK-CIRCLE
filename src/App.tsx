@@ -286,6 +286,11 @@ export default function App() {
   // Circle setup handlers
   const handleCreateCircle = async (name: string) => {
     if (!currentUser) return;
+    if (myCircles.length > 0 && !currentProfile?.is_premium) {
+      showToast("Joining multiple circles is a Premium feature.", "info");
+      setActivePage("premium");
+      return;
+    }
     try {
       const circle = await createCircle(name, currentUser.id);
       setMyCircles((prev) => [...prev, { id: circle.id, name: circle.name }]);
@@ -300,6 +305,11 @@ export default function App() {
 
   const handleJoinCircle = async (inviteCode: string) => {
     if (!currentUser) return;
+    if (myCircles.length > 0 && !currentProfile?.is_premium) {
+      showToast("Joining multiple circles is a Premium feature.", "info");
+      setActivePage("premium");
+      return;
+    }
     try {
       const circle = await joinCircleByInviteCode(inviteCode, currentUser.id);
       setMyCircles((prev) =>
@@ -833,7 +843,14 @@ export default function App() {
           circles={myCircles}
           activeCircleId={activeCircleId}
           onSwitchCircle={handleSwitchCircle}
-          onAddCircle={() => setAddingCircle(true)}
+          onAddCircle={() => {
+            if (currentProfile?.is_premium) {
+              setAddingCircle(true);
+            } else {
+              setActivePage("premium");
+              showToast("Joining multiple circles is a Premium feature.", "info");
+            }
+          }}
         />
         <main className="flex-1 p-6 max-w-7xl w-full mx-auto">
           <AnimatePresence mode="wait">

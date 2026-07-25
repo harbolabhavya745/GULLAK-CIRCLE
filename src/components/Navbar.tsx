@@ -120,9 +120,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onAddCircle?.();
                     setCircleMenuOpen(false);
                   }}
-                  className="w-full flex items-center gap-2 px-3.5 py-2.5 text-xs font-bold font-mono uppercase tracking-wider text-gold-500 border-t border-gold-500/15 hover:bg-gold-500/5 transition-colors cursor-pointer"
+                  className={`w-full flex items-center gap-2 px-3.5 py-2.5 text-xs font-bold font-mono uppercase tracking-wider border-t transition-colors cursor-pointer ${
+                    isPremium
+                      ? "text-gold-500 border-gold-500/15 hover:bg-gold-500/5"
+                      : "text-slate-400 border-gold-500/15 hover:bg-matte-black/60"
+                  }`}
                 >
-                  <Plus className="w-3.5 h-3.5" /> Create or join another
+                  {isPremium ? <Plus className="w-3.5 h-3.5" /> : <Crown className="w-3.5 h-3.5 text-gold-500" />}
+                  {isPremium ? "Create or join another" : "Create or join another — Premium"}
                 </button>
               </div>
             )}
