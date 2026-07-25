@@ -171,6 +171,23 @@ export async function fetchMyCircleId(userId: string): Promise<string | null> {
   return data?.circle_id ?? null;
 }
 
+// Returns every circle this user belongs to (id + name), ordered by when they
+// joined. Used to power the circle switcher — a user can be a member of many
+// circles at once since circle_members is a plain join table.
+export async function fetchMyCircles(userId: string): Promise<{ id: string; name: string }[]> {
+  const { data, error } = await supabase
+    .from("circle_members")
+    .select("circle_id, circles ( id, name )")
+    .eq("user_id", userId)
+    .order("circle_id", { ascending: true });
+  if (error) throw error;
+
+  return (data ?? [])
+    .map((row: any) => row.circles)
+    .filter(Boolean)
+    .map((c: any) => ({ id: c.id, name: c.name ?? "Unnamed Circle" }));
+}
+
 export async function createCircle(name: string, userId: string) {
   const inviteCode = Math.random().toString(36).slice(2, 8).toUpperCase();
   const { data: circle, error } = await supabase

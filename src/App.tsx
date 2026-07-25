@@ -10,6 +10,7 @@ import {
   updateMilestone,
   updateCircleName,
   fetchMyCircleId,
+  fetchMyCircles,
   createCircle,
   joinCircleByInviteCode,
   fetchCircle,
@@ -32,6 +33,7 @@ import { ProfilePage } from "./pages/ProfilePage";
 import { PremiumPage } from "./pages/PremiumPage";
 import { Sidebar } from "./components/Sidebar";
 import { Navbar } from "./components/Navbar";
+import Loader from "./components/Loader";
 import { MemberProfileModal } from "./components/MemberProfileModal";
 import { NotificationPanel } from "./components/NotificationPanel";
 import { ConfettiEffect } from "./components/ConfettiEffect";
@@ -104,6 +106,11 @@ export default function App() {
   const [authChecked, setAuthChecked] = useState(false);
   const [circleChecked, setCircleChecked] = useState(false);
 
+  // Every circle this user belongs to (for the navbar circle switcher), and
+  // whether the "create/join another circle" screen is currently showing.
+  const [myCircles, setMyCircles] = useState<{ id: string; name: string }[]>([]);
+  const [addingCircle, setAddingCircle] = useState(false);
+
   // Invisible auto-roundup engine — fires realistic-looking transactions on
   // its own so the pool grows without anyone clicking "Simulate". See
   // AUTO_MERCHANTS below for the pool of fake merchant/amount pairs.
@@ -145,6 +152,7 @@ export default function App() {
         setCurrentUser(null);
         setCurrentProfile(null);
         setActiveCircleId(null);
+        setMyCircles([]);
         setActivePage("landing");
       }
     });
@@ -152,15 +160,35 @@ export default function App() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // Find (or wait for) the user's circle
+  // Find (or wait for) the user's circles. A user can belong to several
+  // circles — we load them all, then pick whichever one was last active for
+  // this user (remembered in localStorage), falling back to the first one.
   useEffect(() => {
     if (!currentUser) return;
     setCircleChecked(false);
-    fetchMyCircleId(currentUser.id)
-      .then((circleId) => setActiveCircleId(circleId))
-      .catch((err) => console.error("Failed to look up circle", err))
+    fetchMyCircles(currentUser.id)
+      .then((circles) => {
+        setMyCircles(circles);
+        const rememberedId = localStorage.getItem(`gullak:lastCircleId:${currentUser.id}`);
+        const remembered = circles.find((c) => c.id === rememberedId);
+        setActiveCircleId(remembered?.id ?? circles[0]?.id ?? null);
+      })
+      .catch((err) => console.error("Failed to look up circles", err))
       .finally(() => setCircleChecked(true));
   }, [currentUser]);
+
+  // Switch the active circle from the navbar dropdown, remembering the
+  // choice so it's still selected next time this user logs in.
+  const handleSwitchCircle = useCallback(
+    (circleId: string) => {
+      setActiveCircleId(circleId);
+      if (currentUser) {
+        localStorage.setItem(`gullak:lastCircleId:${currentUser.id}`, circleId);
+      }
+      setActivePage("dashboard");
+    },
+    [currentUser]
+  );
 
   // Load all circle-scoped data
   const loadCircleData = useCallback(async () => {
@@ -260,7 +288,9 @@ export default function App() {
     if (!currentUser) return;
     try {
       const circle = await createCircle(name, currentUser.id);
-      setActiveCircleId(circle.id);
+      setMyCircles((prev) => [...prev, { id: circle.id, name: circle.name }]);
+      handleSwitchCircle(circle.id);
+      setAddingCircle(false);
       showToast(`"${name}" circle created!`, "success");
     } catch (err: any) {
       console.error("Failed to create circle", err);
@@ -272,7 +302,11 @@ export default function App() {
     if (!currentUser) return;
     try {
       const circle = await joinCircleByInviteCode(inviteCode, currentUser.id);
-      setActiveCircleId(circle.id);
+      setMyCircles((prev) =>
+        prev.some((c) => c.id === circle.id) ? prev : [...prev, { id: circle.id, name: circle.name }]
+      );
+      handleSwitchCircle(circle.id);
+      setAddingCircle(false);
       showToast("You joined the circle!", "success");
     } catch (err: any) {
       console.error("Failed to join circle", err);
@@ -521,13 +555,21 @@ export default function App() {
       return;
     }
 
-    // Reset all circle-scoped state so stale data doesn't flash
-    setActiveCircleId(null);
+    // Reset circle-scoped state so stale data doesn't flash, then fall back
+    // to another circle the user's still in (if any) rather than always
+    // dropping them at the create/join screen.
+    const remainingCircles = myCircles.filter((c) => c.id !== activeCircleId);
+    setMyCircles(remainingCircles);
     setMembers([]);
     setTransactions([]);
     setClaims([]);
     setPoolBalance(0);
-    setActivePage("dashboard");
+    if (remainingCircles.length > 0) {
+      handleSwitchCircle(remainingCircles[0].id);
+    } else {
+      setActiveCircleId(null);
+      setActivePage("dashboard");
+    }
     showToast("You left the circle.", "info");
   };
 
@@ -732,8 +774,8 @@ export default function App() {
 
   if (!authChecked) {
     return (
-      <div className="min-h-screen bg-matte-black flex items-center justify-center text-slate-400 font-mono text-sm">
-        Loading...
+      <div className="min-h-screen bg-matte-black flex items-center justify-center">
+        <Loader label="Loading" />
       </div>
     );
   }
@@ -748,16 +790,20 @@ export default function App() {
 
   if (!circleChecked) {
     return (
-      <div className="min-h-screen bg-matte-black flex items-center justify-center text-slate-400 font-mono text-sm">
-        Loading your circle...
+      <div className="min-h-screen bg-matte-black flex items-center justify-center">
+        <Loader label="Finding your circle" />
       </div>
     );
   }
 
-  if (!activeCircleId) {
+  if (!activeCircleId || addingCircle) {
     return (
       <>
-        <CircleSetupPage onCreate={handleCreateCircle} onJoin={handleJoinCircle} />
+        <CircleSetupPage
+          onCreate={handleCreateCircle}
+          onJoin={handleJoinCircle}
+          onCancel={activeCircleId ? () => setAddingCircle(false) : undefined}
+        />
         <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       </>
     );
@@ -784,6 +830,10 @@ export default function App() {
           profile={currentProfile}
           circleName={circleName}
           isPremium={!!currentProfile?.is_premium}
+          circles={myCircles}
+          activeCircleId={activeCircleId}
+          onSwitchCircle={handleSwitchCircle}
+          onAddCircle={() => setAddingCircle(true)}
         />
         <main className="flex-1 p-6 max-w-7xl w-full mx-auto">
           <AnimatePresence mode="wait">

@@ -1,5 +1,5 @@
-import React from "react";
-import { Menu, Bell, Coins, Sparkles, User, ChevronDown, Crown } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { Menu, Bell, Coins, Sparkles, User, ChevronDown, Crown, Users, Plus, Check } from "lucide-react";
 
 interface NavbarProps {
   activePage: string;
@@ -10,6 +10,10 @@ interface NavbarProps {
   profile?: any;
   circleName?: string;
   isPremium?: boolean;
+  circles?: { id: string; name: string }[];
+  activeCircleId?: string | null;
+  onSwitchCircle?: (circleId: string) => void;
+  onAddCircle?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -20,8 +24,25 @@ export const Navbar: React.FC<NavbarProps> = ({
   onNavigate,
   profile,
   circleName,
-  isPremium = false
+  isPremium = false,
+  circles = [],
+  activeCircleId,
+  onSwitchCircle,
+  onAddCircle,
 }) => {
+  const [circleMenuOpen, setCircleMenuOpen] = useState(false);
+  const circleMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!circleMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (circleMenuRef.current && !circleMenuRef.current.contains(e.target as Node)) {
+        setCircleMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [circleMenuOpen]);
   const firstName = profile?.name ? profile.name.split(" ")[0] : "Member";
   const avatarUrl = profile?.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(profile?.name || "U")}`;
 
@@ -56,9 +77,57 @@ export const Navbar: React.FC<NavbarProps> = ({
           <Menu className="w-5 h-5" />
         </button>
 
-        <h2 className="text-xl font-bold text-slate-100 font-sans tracking-tight">
+        <h2 className="text-xl font-bold text-slate-100 font-sans tracking-tight hidden sm:block">
           {getPageTitle()}
         </h2>
+
+        {/* Circle switcher — always shown once the user has a circle, so "create or join another" stays discoverable */}
+        {circles.length > 0 && (
+          <div className="relative" ref={circleMenuRef}>
+            <button
+              type="button"
+              onClick={() => setCircleMenuOpen((prev) => !prev)}
+              className="flex items-center gap-2 pl-2.5 pr-2 py-1.5 rounded-xl bg-matte-charcoal border border-gold-500/15 hover:border-gold-500/35 text-slate-200 text-sm font-semibold cursor-pointer transition-colors"
+              aria-haspopup="true"
+              aria-expanded={circleMenuOpen}
+            >
+              <Users className="w-3.5 h-3.5 text-gold-500" />
+              <span className="max-w-[140px] truncate">{circleName || "Select circle"}</span>
+              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${circleMenuOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            {circleMenuOpen && (
+              <div className="absolute left-0 mt-2 w-64 rounded-xl bg-matte-charcoal border border-gold-500/15 shadow-xl overflow-hidden z-40">
+                <div className="max-h-64 overflow-y-auto py-1">
+                  {circles.map((circle) => (
+                    <button
+                      key={circle.id}
+                      type="button"
+                      onClick={() => {
+                        onSwitchCircle?.(circle.id);
+                        setCircleMenuOpen(false);
+                      }}
+                      className="w-full flex items-center justify-between gap-2 px-3.5 py-2.5 text-sm text-left text-slate-200 hover:bg-matte-black/60 transition-colors cursor-pointer"
+                    >
+                      <span className="truncate">{circle.name}</span>
+                      {circle.id === activeCircleId && <Check className="w-3.5 h-3.5 text-gold-500 shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onAddCircle?.();
+                    setCircleMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2 px-3.5 py-2.5 text-xs font-bold font-mono uppercase tracking-wider text-gold-500 border-t border-gold-500/15 hover:bg-gold-500/5 transition-colors cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Create or join another
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-4">

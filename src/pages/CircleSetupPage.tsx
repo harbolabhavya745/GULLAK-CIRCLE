@@ -1,13 +1,16 @@
 import React, { useState } from "react";
 import { motion } from "motion/react";
-import { Users, ArrowRight, Sparkles } from "lucide-react";
+import { Users, ArrowRight, ArrowLeft, Sparkles } from "lucide-react";
 
 interface CircleSetupPageProps {
   onCreate: (name: string) => Promise<void>;
   onJoin: (inviteCode: string) => Promise<void>;
+  // Present only when the user already belongs to at least one other circle —
+  // lets them back out to the dashboard instead of being stuck here.
+  onCancel?: () => void;
 }
 
-export const CircleSetupPage: React.FC<CircleSetupPageProps> = ({ onCreate, onJoin }) => {
+export const CircleSetupPage: React.FC<CircleSetupPageProps> = ({ onCreate, onJoin, onCancel }) => {
   const [mode, setMode] = useState<"create" | "join">("create");
   const [name, setName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
@@ -41,12 +44,26 @@ export const CircleSetupPage: React.FC<CircleSetupPageProps> = ({ onCreate, onJo
         className="w-full max-w-md p-8 rounded-3xl bg-matte-charcoal border border-gold-500/15 shadow-xl space-y-6"
       >
         <div className="flex items-center gap-3">
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              aria-label="Back to dashboard"
+              className="p-2 -ml-1 rounded-xl text-slate-400 hover:text-gold-500 hover:bg-matte-black/60 transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+          )}
           <div className="p-2.5 bg-gold-500/10 rounded-xl text-gold-500 border border-gold-500/20">
             <Users className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-lg font-bold font-heading">Set up your Circle</h1>
-            <p className="text-xs text-slate-400 font-mono">You're not in a Gullak Circle yet</p>
+            <h1 className="text-lg font-bold font-heading">
+              {onCancel ? "Add another Circle" : "Set up your Circle"}
+            </h1>
+            <p className="text-xs text-slate-400 font-mono">
+              {onCancel ? "Create a new one, or join with an invite code" : "You're not in a Gullak Circle yet"}
+            </p>
           </div>
         </div>
 
